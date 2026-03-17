@@ -3,72 +3,1324 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moon Animator Web Studio - v1.5 (Modular)</title>
+    <title>Moon Animator Web Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
-    
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #1a1a1a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #2d2d2d; }
+        ::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #5a5a5a; }
+
+        .panel {
+            background: rgba(30, 30, 30, 0.95);
+            border: 1px solid #3a3a3a;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            position: absolute;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to bottom, #3b82f6, #2563eb);
+            border: 1px solid #1d4ed8;
+            color: white;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-primary:active { transform: translateY(1px); }
+        
+        .btn-secondary {
+            background: #4b5563;
+            border: 1px solid #374151;
+            color: white;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-secondary:hover { background: #6b7280; }
+
+        /* Panel Resizers */
+        .resizer { position: absolute; z-index: 50; transition: background 0.2s; }
+        .resizer:hover { background: rgba(59, 130, 246, 0.4); }
+        .resizer-r { right: 0; top: 0; bottom: 0; width: 6px; cursor: col-resize; }
+        .resizer-l { left: 0; top: 0; bottom: 0; width: 6px; cursor: col-resize; }
+        .resizer-b { left: 0; right: 0; bottom: 0; height: 6px; cursor: row-resize; }
+        .resizer-t { left: 0; right: 0; top: 0; height: 6px; cursor: row-resize; }
+        .resizer-br { right: 0; bottom: 0; width: 12px; height: 12px; cursor: nwse-resize; z-index: 51; }
+        .resizer-bl { left: 0; bottom: 0; width: 12px; height: 12px; cursor: nesw-resize; z-index: 51; }
+
+        /* Keyframes */
+        .keyframe-dot {
+            width: 12px; height: 12px; 
+            background: #fbbf24; 
+            border-radius: 50%;
+            position: absolute; top: 50%; transform: translate(-50%, -50%);
+            box-shadow: 0 0 4px rgba(251, 191, 36, 0.8);
+            cursor: grab;
+            z-index: 10;
+            border: 2px solid transparent;
+            transition: border-color 0.1s, transform 0.1s;
+        }
+        .keyframe-dot:hover {
+            border-color: white;
+            transform: translate(-50%, -50%) scale(1.3);
+        }
+        .keyframe-dot:active { cursor: grabbing; }
+        .keyframe-dot.selected {
+            background: #ef4444;
+            box-shadow: 0 0 10px #ef4444;
+            border-color: white;
+        }
+
+        .action-toast {
+            position: absolute; top: 5rem; left: 50%; transform: translateX(-50%);
+            background: rgba(59, 130, 246, 0.9); color: white;
+            padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;
+            pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 50;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .action-toast.show { opacity: 1; }
+        input[type=number], input[type=text] { user-select: text; }
+    </style>
 </head>
 <body>
 
+    <!-- 3D Canvas -->
     <div id="canvas-container"></div>
     <div id="action-toast" class="action-toast">Action completed!</div>
 
-    <div id="part-tooltip" class="fixed pointer-events-none hidden tooltip-bg text-xs px-3 py-2 rounded shadow-2xl z-50 border transition-opacity">
-        <div class="font-bold text-accent mb-1 border-b pb-1" id="tooltip-part-name">Part Name</div>
+    <!-- 3D Tooltip -->
+    <div id="part-tooltip" class="fixed pointer-events-none hidden bg-black/90 text-white text-xs px-3 py-2 rounded shadow-2xl z-50 border border-gray-600 transition-opacity">
+        <div class="font-bold text-blue-400 mb-1 border-b border-gray-700 pb-1" id="tooltip-part-name">Part Name</div>
         <div class="mt-1"><span class="text-yellow-400 font-bold">R</span> - Toggle Move/Rotate</div>
         <div><span class="text-yellow-400 font-bold">G</span> - World / Part Space</div>
     </div>
 
-    <div class="absolute top-0 left-0 w-full h-14 panel flex items-center justify-between px-4 z-20" style="position: fixed;">
+    <!-- Header / Toolbar -->
+    <div class="absolute top-0 left-0 w-full h-14 panel flex items-center justify-between px-4 z-20 border-b border-gray-700" style="position: fixed;">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded flex items-center justify-center font-bold text-white shadow-lg logo-bg">M</div>
-            <h1 class="font-semibold tracking-wide flex items-center gap-2">Moon Animator <span class="text-xs text-accent font-normal">v1.5</span></h1>
-            <div class="w-px h-6 bg-border mx-2"></div>
-            <input type="text" id="anim-name" value="My_Animation" class="input-field text-sm px-2 py-1 rounded outline-none w-48" placeholder="Animation Name">
+            <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/50">M</div>
+            <h1 class="text-gray-200 font-semibold tracking-wide flex items-center gap-2">Moon Animator <span class="text-xs text-blue-400 font-normal">v1.5</span></h1>
+            
+            <div class="w-px h-6 bg-gray-600 mx-2"></div>
+            <input type="text" id="anim-name" value="My_Animation" class="bg-gray-900 border border-gray-600 text-gray-300 text-sm px-2 py-1 rounded focus:border-blue-500 outline-none w-48" placeholder="Animation Name" title="Animation Name">
+            
+            <span class="ml-2 px-2 py-0.5 bg-green-900/50 text-green-400 border border-green-800 rounded text-[10px] uppercase font-bold tracking-wider">Auto-Save ON</span>
         </div>
         
         <div class="flex items-center gap-2">
-            <button onclick="app.pluginManager.openMenu()" class="btn-secondary px-3 py-1.5 rounded text-sm font-medium mr-4 flex items-center gap-2">
-                Plugins
+            <button onclick="document.getElementById('update-log-modal').classList.remove('hidden')" class="btn-secondary px-3 py-1.5 rounded text-sm font-medium mr-4 flex items-center gap-2 text-blue-300 border-blue-800/50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Update Log
             </button>
-            <button onclick="app.smoothSelectedKeyframes()" class="btn-secondary px-3 py-1.5 rounded text-sm font-medium mr-2">Smooth (M)</button>
+            <button onclick="app.smoothSelectedKeyframes()" class="btn-secondary px-3 py-1.5 rounded text-sm font-medium mr-2" title="Hotkey: M">Smooth (M)</button>
             <input type="file" id="import-file" class="hidden" accept=".json" onchange="app.handleImport(event)">
             <button onclick="document.getElementById('import-file').click()" class="btn-secondary px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2">Import</button>
             <button onclick="app.exportAnimation()" class="btn-primary px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2">Export</button>
         </div>
     </div>
 
+    <!-- Left Sidebar (Hierarchy) -->
     <div id="panel-hierarchy" class="panel rounded-lg flex flex-col z-10" style="top: 4.5rem; left: 1rem; width: 256px; height: 350px;">
         <div class="resizer resizer-r" data-resize="hierarchy" data-dir="r"></div>
         <div class="resizer resizer-b" data-resize="hierarchy" data-dir="b"></div>
         <div class="resizer resizer-br" data-resize="hierarchy" data-dir="br"></div>
         
-        <div class="p-3 border-b font-semibold text-sm cursor-move drag-handle" data-target="panel-hierarchy">R6 Rig Hierarchy</div>
+        <div class="p-3 border-b border-gray-700 font-semibold text-gray-300 text-sm cursor-move drag-handle" data-target="panel-hierarchy">R6 Rig Hierarchy</div>
         <div id="hierarchy-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
-        <div class="p-3 border-t bg-black/20 rounded-b-lg">
-            <div class="text-xs opacity-70 mb-1">Selected Part</div>
-            <div id="selected-part-name" class="text-accent font-mono text-sm">None</div>
+        <div class="p-3 border-t border-gray-700 bg-gray-900/50 rounded-b-lg">
+            <div class="text-xs text-gray-500 mb-1">Selected Part</div>
+            <div id="selected-part-name" class="text-blue-400 font-mono text-sm">None</div>
         </div>
     </div>
 
-    <div id="plugin-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm hidden">
-        <div class="panel w-[30rem] rounded-xl p-6 shadow-2xl">
-            <h2 class="text-2xl font-bold mb-4 flex items-center gap-3 border-b pb-3">Plugin Manager</h2>
-            <div id="installed-plugins-list" class="space-y-2 mb-4 max-h-48 overflow-y-auto">
-                <p class="text-sm opacity-60">No plugins installed.</p>
+    <!-- Right Sidebar (Properties, VFX & Plugins Tabs) -->
+    <div id="panel-properties" class="panel rounded-lg flex flex-col z-10 overflow-hidden" style="top: 4.5rem; right: 1rem; width: 320px; height: 420px;">
+        <div class="resizer resizer-l" data-resize="properties" data-dir="l"></div>
+        <div class="resizer resizer-b" data-resize="properties" data-dir="b"></div>
+        <div class="resizer resizer-bl" data-resize="properties" data-dir="bl"></div>
+
+        <div class="flex border-b border-gray-700 bg-gray-900/30 cursor-move drag-handle" data-target="panel-properties">
+            <button id="tab-btn-transform" class="flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-blue-400 border-b-2 border-blue-500 transition-colors" onclick="app.switchTab('transform')">Transform</button>
+            <button id="tab-btn-vfx" class="flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-500 border-b-2 border-transparent hover:text-gray-300 transition-colors" onclick="app.switchTab('vfx')">VFX</button>
+            <button id="tab-btn-plugins" class="flex-1 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-500 border-b-2 border-transparent hover:text-gray-300 transition-colors" onclick="app.switchTab('plugins')">Plugins</button>
+        </div>
+
+        <!-- Transform Panel -->
+        <div id="panel-transform" class="flex-1 flex flex-col overflow-hidden">
+            <div class="p-3 border-b border-gray-700 flex justify-between items-center gap-1 bg-gray-800/30">
+                <span class="text-xs font-semibold text-gray-400 uppercase">Gizmo State</span>
+                <div class="flex gap-1">
+                    <span id="gizmo-space-badge" class="bg-purple-600/30 text-purple-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold">World</span>
+                    <span id="gizmo-mode-badge" class="bg-blue-600/30 text-blue-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold">Rotate</span>
+                </div>
             </div>
-            <div class="border-t pt-4">
-                <p class="text-xs opacity-70 mb-2">Install a plugin by selecting its .js file.</p>
-                <input type="file" id="plugin-file-input" class="hidden" accept=".js" onchange="app.pluginManager.loadPluginFile(event)">
-                <button onclick="document.getElementById('plugin-file-input').click()" class="w-full btn-primary py-2.5 rounded font-bold uppercase tracking-wide">Install Plugin (.js)</button>
-                <button onclick="app.pluginManager.closeMenu()" class="mt-2 w-full btn-secondary py-2 rounded text-sm">Close</button>
+            <div class="p-4 space-y-5 overflow-y-auto flex-1">
+                <div>
+                    <div class="text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-bold">Position</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="relative"><span class="absolute left-2 top-1 text-[10px] text-red-500 font-bold">X</span><input type="number" id="pos-x" class="w-full bg-gray-800 border border-gray-600 rounded pl-5 pr-1 py-1 text-xs text-gray-200 focus:border-blue-500 outline-none" onchange="app.updateTransform('position', 'x', this.value)"></div>
+                        <div class="relative"><span class="absolute left-2 top-1 text-[10px] text-green-500 font-bold">Y</span><input type="number" id="pos-y" class="w-full bg-gray-800 border border-gray-600 rounded pl-5 pr-1 py-1 text-xs text-gray-200 focus:border-blue-500 outline-none" onchange="app.updateTransform('position', 'y', this.value)"></div>
+                        <div class="relative"><span class="absolute left-2 top-1 text-[10px] text-blue-500 font-bold">Z</span><input type="number" id="pos-z" class="w-full bg-gray-800 border border-gray-600 rounded pl-5 pr-1 py-1 text-xs text-gray-200 focus:border-blue-500 outline-none" onchange="app.updateTransform('position', 'z', this.value)"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-bold">Rotation (Deg)</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="relative"><span class="absolute left-2 top-1 text-[10px] text-red-500 font-bold">X</span><input type="number" id="rot-x" class="w-full bg-gray-800 border border-gray-600 rounded pl-5 pr-1 py-1 text-xs text-gray-200 focus:border-blue-500 outline-none" onchange="app.updateTransform('rotation', 'x', this.value)"></div>
+                        <div class="relative"><span class="absolute left-2 top-1 text-[10px] text-green-500 font-bold">Y</span><input type="number" id="rot-y" class="w-full bg-gray-800 border border-gray-600 rounded pl-5 pr-1 py-1 text-xs text-gray-200 focus:border-blue-500 outline-none" onchange="app.updateTransform('rotation', 'y', this.value)"></div>
+                        <div class="relative"><span class="absolute left-2 top-1 text-[10px] text-blue-500 font-bold">Z</span><input type="number" id="rot-z" class="w-full bg-gray-800 border border-gray-600 rounded pl-5 pr-1 py-1 text-xs text-gray-200 focus:border-blue-500 outline-none" onchange="app.updateTransform('rotation', 'z', this.value)"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-700 bg-gray-900/50">
+                <button onclick="app.keyframeCurrent()" class="w-full btn-primary py-2 rounded text-sm font-bold shadow-lg shadow-blue-900/50">+ ADD KEYFRAME</button>
+            </div>
+        </div>
+
+        <!-- VFX Panel -->
+        <div id="panel-vfx" class="hidden flex-1 flex flex-col p-6 items-center justify-center text-center bg-gradient-to-b from-gray-800/30 to-gray-900/50">
+            <div class="w-16 h-16 bg-purple-900/40 rounded-full flex items-center justify-center mb-4 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+                <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+            </div>
+            <h3 class="font-bold text-gray-200 text-lg mb-2">VFX Tools</h3>
+            <p class="text-xs text-gray-400 mb-6 leading-relaxed">VFX is coming in the next update! You will soon be able to add dynamic particles, trails, and impact effects.</p>
+            <div class="px-4 py-1.5 bg-gray-800 border border-gray-600 rounded text-xs font-bold text-purple-300 uppercase tracking-widest">Coming Soon</div>
+        </div>
+
+        <!-- Plugins Panel -->
+        <div id="panel-plugins" class="hidden flex-1 flex flex-col p-4 bg-gray-900/50 overflow-y-auto space-y-3">
+            <h3 class="font-bold text-gray-200 text-sm border-b border-gray-700 pb-2 mb-1">Available Plugins</h3>
+            
+            <!-- Plugin: Labeled Parts -->
+            <div class="bg-gray-800 border border-gray-700 p-3 rounded-lg flex flex-col gap-3 shadow-md">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="text-green-400 font-bold text-sm flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+                            Labeled Parts
+                        </h4>
+                        <p class="text-[11px] text-gray-400 mt-1 leading-tight">Labels your Parts with letters and colors. Mapped beautifully to all 6 faces of every part.</p>
+                    </div>
+                    <button id="btn-plugin-labeled" onclick="app.toggleLabeledPartsPlugin()" class="btn-secondary px-3 py-1.5 rounded text-xs font-bold transition-all border-green-700/50 hover:border-green-500">Install</button>
+                </div>
+            </div>
+            
+            <!-- More plugins can be added here easily later -->
+        </div>
+    </div>
+
+    <!-- Bottom Timeline -->
+    <div id="panel-timeline" class="panel rounded-lg flex flex-col z-10" style="bottom: 1rem; left: 1rem; right: 1rem; height: 260px;">
+        <div class="resizer resizer-t" data-resize="timeline" data-dir="t"></div>
+        
+        <div class="h-12 border-b border-gray-700 flex items-center px-4 gap-4 bg-gray-900/50 rounded-t-lg cursor-move drag-handle" data-target="panel-timeline">
+            <button onclick="app.togglePlay()" id="play-btn" class="text-gray-300 hover:text-white transition-colors">
+                <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <div class="text-gray-300 font-mono text-sm bg-gray-800 px-3 py-1 rounded border border-gray-700 shadow-inner" id="time-display">00:00 / 05:00</div>
+            
+            <div class="h-5 w-px bg-gray-600 mx-2"></div>
+            <button onclick="app.copyKeyframes()" class="text-xs text-gray-400 hover:text-white flex items-center gap-1 bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded transition-colors">Copy</button>
+            <button onclick="app.pasteKeyframes()" class="text-xs text-gray-400 hover:text-white flex items-center gap-1 bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded transition-colors">Paste</button>
+            <button onclick="app.deleteSelectedKeyframes()" class="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 ml-2 bg-red-900/20 hover:bg-red-900/40 px-2 py-1 rounded transition-colors">Delete</button>
+            <div class="flex-1"></div>
+            <div class="text-xs text-gray-500 font-mono bg-gray-800 px-2 py-1 rounded border border-gray-700">FPS: 60</div>
+        </div>
+        
+        <div class="flex-1 flex overflow-hidden relative select-none">
+            <div id="track-labels" class="w-32 bg-gray-800/90 border-r border-gray-700 overflow-y-hidden z-20 shadow-[2px_0_5px_rgba(0,0,0,0.2)]">
+                <div class="h-7 bg-gray-900 border-b border-gray-700 text-[10px] text-gray-500 px-2 py-1.5 font-bold uppercase tracking-wider">Parts</div>
+                <div id="labels-container" class="relative"></div>
+            </div>
+            
+            <div id="timeline-tracks-container" class="flex-1 relative overflow-y-auto overflow-x-hidden bg-gray-900/80 cursor-crosshair">
+                <div id="timeline-ruler" class="sticky top-0 left-0 w-full h-7 bg-gray-900 border-b border-gray-700 z-10 cursor-ew-resize">
+                    <div class="absolute top-0 left-0 w-full h-full flex justify-between px-2 text-[10px] text-gray-500 font-mono items-center pointer-events-none">
+                        <span>0</span><span>50</span><span>100</span><span>150</span><span>200</span><span>250</span><span>300</span>
+                    </div>
+                </div>
+                <div id="selection-box" class="absolute bg-blue-500/30 border border-blue-400 hidden pointer-events-none z-30 mix-blend-screen shadow-[0_0_10px_rgba(59,130,246,0.3)]"></div>
+                <div id="keyframes-container" class="relative w-full pb-4"></div>
+            </div>
+            <div id="scrubber-wrapper" class="absolute top-0 bottom-0 left-32 right-0 pointer-events-none overflow-hidden z-20">
+                <div id="scrubber" class="absolute top-0 bottom-0 w-0.5 bg-blue-500/80 shadow-[0_0_8px_#3b82f6] border-l border-blue-300/50" style="left: 0%">
+                    <div class="absolute top-0 -left-2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-blue-400"></div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="functions.js"></script>
+    <!-- Update Log Modal -->
+    <div id="update-log-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm hidden">
+        <div class="panel w-[30rem] rounded-xl p-6 shadow-2xl border border-gray-600">
+            <h2 class="text-2xl font-bold text-white mb-4 flex items-center gap-3 border-b border-gray-700 pb-3">
+                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                Update Log
+            </h2>
+            <div class="space-y-5 max-h-80 overflow-y-auto text-sm pr-2 pb-2">
+                <div>
+                    <h3 class="text-blue-400 font-bold text-base">v1.5 - Multi-Face Texturing!</h3>
+                    <ul class="list-disc pl-5 mt-2 space-y-1.5 text-gray-200">
+                        <li><span class="text-white font-semibold">Face Mapping:</span> The default noob head now appropriately only has a smiley face on the front! All other sides remain standard yellow.</li>
+                        <li><span class="text-white font-semibold">Labeled Parts Overhaul:</span> The plugin correctly marks T, L, R, FRONT, and BACK using a cached canvas material array. Try it out!</li>
+                        <li><span class="text-white font-semibold">Plugins System added!</span> Access the Plugins tab next to VFX to easily toggle testing plugins.</li>
+                    </ul>
+                </div>
+            </div>
+            <button onclick="document.getElementById('update-log-modal').classList.add('hidden')" class="mt-6 w-full btn-primary py-2.5 rounded font-bold uppercase tracking-wide">Awesome!</button>
+        </div>
+    </div>
+
+<script>
+/**
+ * MOON ANIMATOR WEB STUDIO - v1.5
+ * Featuring independent multi-face materials (array materials) and the Labeled Parts Plugin.
+ */
+
+class AnimationApp {
+    constructor() {
+        this.container = document.getElementById('canvas-container');
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.transformControl = null;
+        this.rig = {}; 
+        this.partsList = ['Torso', 'Head', 'Left Arm', 'Right Arm', 'Left Leg', 'Right Leg'];
+        this.selectedObject = null;
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+        
+        this.textureCache = {}; // Cache for heavily drawn canvas textures to keep WebGL blazing fast
+        
+        // Plugin States
+        this.plugins = {
+            labeledParts: { installed: false }
+        };
+
+        // Animation State
+        this.isPlaying = false;
+        this.currentFrame = 0;
+        this.totalFrames = 300;
+        this.fps = 60;
+        this.lastTime = 0;
+        this.keyframes = {}; 
+        
+        // Selection & Tooltip
+        this.selectedKeyframes = new Set();
+        this.clipboard = [];
+        this.isMarquee = false;
+        this.marqueeStart = { x: 0, y: 0 };
+        this.preMarqueeSelection = new Set();
+        
+        // Camera State
+        this.keys = { w: false, a: false, s: false, d: false, q: false, e: false };
+        this.isRightMouseDown = false;
+        this.previousMousePosition = { x: 0, y: 0 };
+        this.cameraSpeed = 0.2;
+        this.orbitSpeed = 0.005;
+
+        this.init();
+    }
+
+    init() {
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x202025);
+        this.scene.fog = new THREE.Fog(0x202025, 10, 50);
+
+        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera.position.set(0, 5, 8);
+        this.camera.lookAt(0, 2, 0);
+
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.shadowMap.enabled = true;
+        this.container.appendChild(this.renderer.domElement);
+
+        this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 7);
+        dirLight.castShadow = true;
+        this.scene.add(dirLight);
+
+        this.scene.add(new THREE.GridHelper(50, 50, 0x444444, 0x2a2a2a));
+
+        this.transformControl = new THREE.TransformControls(this.camera, this.renderer.domElement);
+        this.transformControl.setMode('rotate'); 
+        this.transformControl.setSpace('world'); 
+        
+        this.transformControl.addEventListener('change', () => this.updateUIValues());
+        this.transformControl.addEventListener('dragging-changed', (e) => {
+            if (e.value) this.isRightMouseDown = false;
+            else this.autoSave();
+        });
+        
+        this.transformControl.addEventListener('objectChange', () => {
+            if (!this.isPlaying) { this.updateUIValues(); this.keyframeCurrent(true); }
+        });
+        this.scene.add(this.transformControl);
+
+        this.buildR6Rig();
+        this.loadAutoSave();
+
+        window.addEventListener('resize', () => this.onWindowResize(), false);
+        document.addEventListener('keydown', (e) => this.onKeyDown(e), false);
+        document.addEventListener('keyup', (e) => this.onKeyUp(e), false);
+        
+        this.renderer.domElement.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
+        this.renderer.domElement.addEventListener('mouseup', (e) => this.onMouseUp(e), false);
+        this.renderer.domElement.addEventListener('mousemove', (e) => this.onMouseMove(e), false);
+        this.renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault(), false);
+
+        this.setupTimelineInteractions();
+        this.setupPanelResizers();
+        this.renderKeyframesUI();
+        this.animate();
+    }
+
+    // --- MATERIAL & TEXTURE GENERATION SYSTEM ---
+
+    createFaceMaterial(opts) {
+        // Generates either a pure color material or a robust cached canvas texture.
+        const key = JSON.stringify(opts);
+        
+        if (!opts.drawSmiley && !opts.drawBorders && !opts.text) {
+            return new THREE.MeshStandardMaterial({ color: new THREE.Color(opts.bgColor), roughness: 0.6 });
+        }
+
+        let tex = this.textureCache[key];
+        if (!tex) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = opts.bgColor || '#ffffff';
+            ctx.fillRect(0, 0, 256, 256);
+            
+            // Developer borders
+            if (opts.drawBorders) {
+                ctx.lineWidth = 12;
+                ctx.strokeStyle = '#00FF00'; // Green Side Lines
+                ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(6, 256); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(250, 0); ctx.lineTo(250, 256); ctx.stroke();
+                
+                ctx.strokeStyle = '#0088FF'; // Blue Horizontal Lines
+                ctx.beginPath(); ctx.moveTo(0, 6); ctx.lineTo(256, 6); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, 250); ctx.lineTo(256, 250); ctx.stroke();
+            }
+            
+            // Classic Smiley Face
+            if (opts.drawSmiley) {
+                ctx.fillStyle = '#000000';
+                // Eyes
+                ctx.fillRect(80, 80, 20, 40);
+                ctx.fillRect(156, 80, 20, 40);
+                // Smile Arc
+                ctx.beginPath();
+                ctx.arc(128, 140, 40, 0, Math.PI, false);
+                ctx.lineWidth = 12;
+                ctx.strokeStyle = '#000000';
+                ctx.stroke();
+            }
+            
+            // Lettering
+            if (opts.text) {
+                ctx.fillStyle = '#E5E4E2'; // Off-white
+                ctx.font = 'bold 80px "Segoe UI", Arial, sans-serif';
+                if (opts.text === 'FRONT' || opts.text === 'BACK') {
+                    ctx.font = 'bold 45px "Segoe UI", Arial, sans-serif'; // Shrink large text
+                }
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(opts.text, 128, 128);
+            }
+            
+            tex = new THREE.CanvasTexture(canvas);
+            tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+            this.textureCache[key] = tex;
+        }
+        
+        // Return a fresh material utilizing the cached texture 
+        // This is crucial so setting .emissive on one part doesn't highlight everything
+        return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, color: 0xffffff });
+    }
+
+    setEmissiveHighlight(object3D, hexColor) {
+        if(!object3D) return;
+        object3D.traverse(c => {
+            if (c.isMesh) {
+                if (Array.isArray(c.material)) {
+                    c.material.forEach(m => m.emissive.setHex(hexColor));
+                } else {
+                    c.material.emissive.setHex(hexColor);
+                }
+            }
+        });
+    }
+
+    buildR6Rig() {
+        this.rig.root = new THREE.Group();
+        this.rig.root.position.y = 3; 
+        this.scene.add(this.rig.root);
+
+        const createPart = (name, w, h, d, parent, px, py, pz, pivotOffset) => {
+            const group = new THREE.Group();
+            group.position.set(px, py, pz);
+            const geo = new THREE.RoundedBoxGeometry(w, h, d, 4, 0.08);
+            geo.translate(0, pivotOffset, 0); 
+            
+            let mats;
+            if (name === 'Head') {
+                // The head only has the smiley on Face 4 (Front)
+                mats = [
+                    this.createFaceMaterial({ bgColor: '#f6d743' }), // 0: Right (+x)
+                    this.createFaceMaterial({ bgColor: '#f6d743' }), // 1: Left (-x)
+                    this.createFaceMaterial({ bgColor: '#f6d743' }), // 2: Top (+y)
+                    this.createFaceMaterial({ bgColor: '#f6d743' }), // 3: Bottom (-y)
+                    this.createFaceMaterial({ bgColor: '#f6d743', drawSmiley: true }), // 4: Front (+z)
+                    this.createFaceMaterial({ bgColor: '#f6d743' })  // 5: Back (-z)
+                ];
+            } else {
+                let color = '#f6d743'; // Yellow arms
+                if (name === 'Torso') color = '#0d69ac'; // Blue torso
+                if (name.includes('Leg')) color = '#a1c48c'; // Green legs
+                mats = this.createFaceMaterial({ bgColor: color });
+            }
+
+            const mesh = new THREE.Mesh(geo, mats);
+            mesh.castShadow = true; mesh.receiveShadow = true;
+            mesh.userData = { isRigPart: true, name: name, parentGroup: group };
+            group.add(mesh); parent.add(group);
+            this.rig[name] = group;
+            return group;
+        };
+
+        const torso = createPart('Torso', 2, 2, 1, this.rig.root, 0, 0, 0, 0);
+        createPart('Head', 1.2, 1.2, 1.2, torso, 0, 1, 0, 0.6);
+        createPart('Left Arm', 1, 2, 1, torso, -1.5, 1, 0, -1);
+        createPart('Right Arm', 1, 2, 1, torso, 1.5, 1, 0, -1);
+        createPart('Left Leg', 1, 2, 1, torso, -0.5, -1, 0, -1);
+        createPart('Right Leg', 1, 2, 1, torso, 0.5, -1, 0, -1);
+
+        this.populateHierarchy();
+    }
+
+    // --- PLUGIN SYSTEM ---
+
+    toggleLabeledPartsPlugin() {
+        const btn = document.getElementById('btn-plugin-labeled');
+        
+        if (!this.plugins.labeledParts.installed) {
+            this.plugins.labeledParts.installed = true;
+            btn.innerText = "Uninstall";
+            btn.className = "btn-secondary px-3 py-1.5 rounded text-xs font-bold bg-red-900/40 text-red-300 border border-red-800 hover:bg-red-900/60 transition-all";
+            this.applyLabeledParts();
+            this.showToast("Plugin Installed: Labeled Parts");
+        } else {
+            this.plugins.labeledParts.installed = false;
+            btn.innerText = "Install";
+            btn.className = "btn-secondary px-3 py-1.5 rounded text-xs font-bold transition-all border-green-700/50 hover:border-green-500";
+            this.removeLabeledParts();
+            this.showToast("Plugin Removed: Labeled Parts");
+        }
+    }
+
+    applyLabeledParts() {
+        Object.keys(this.rig).forEach(partName => {
+            if (partName === 'root') return;
+            const group = this.rig[partName];
+            const mesh = group.children[0];
+            
+            if (mesh && mesh.isMesh) {
+                if (!mesh.userData.originalMaterial) {
+                    mesh.userData.originalMaterial = mesh.material;
+                }
+                
+                const isHead = partName === 'Head';
+                const isTorso = partName === 'Torso';
+                const bg = isHead ? '#A3A2A5' : '#8B0000'; // Gray for head, Dark Red for body
+                
+                const mats = [
+                    this.createFaceMaterial({ bgColor: bg, text: 'R', drawBorders: true }), // Right (+X)
+                    this.createFaceMaterial({ bgColor: bg, text: 'L', drawBorders: true }), // Left (-X)
+                    this.createFaceMaterial({ bgColor: bg, text: 'T', drawBorders: true }), // Top (+Y)
+                    this.createFaceMaterial({ bgColor: bg, text: '', drawBorders: true }),  // Bottom (-Y)
+                    this.createFaceMaterial({ 
+                        bgColor: bg, 
+                        text: isHead ? '' : (isTorso ? 'FRONT' : 'F'), 
+                        drawSmiley: isHead, 
+                        drawBorders: true 
+                    }), // Front (+Z)
+                    this.createFaceMaterial({ 
+                        bgColor: bg, 
+                        text: isTorso ? 'BACK' : 'B', 
+                        drawBorders: true 
+                    }) // Back (-Z)
+                ];
+                
+                mesh.material = mats;
+
+                // Re-apply highlight if this part was currently selected
+                if (this.selectedObject === group) {
+                    this.setEmissiveHighlight(group, 0x222222);
+                }
+            }
+        });
+    }
+
+    removeLabeledParts() {
+        Object.keys(this.rig).forEach(partName => {
+            if (partName === 'root') return;
+            const group = this.rig[partName];
+            const mesh = group.children[0];
+            if (mesh && mesh.isMesh && mesh.userData.originalMaterial) {
+                mesh.material = mesh.userData.originalMaterial;
+                
+                if (this.selectedObject === group) {
+                    this.setEmissiveHighlight(group, 0x222222);
+                }
+            }
+        });
+    }
+
+
+    // --- CORE LOGIC ---
+
+    setupPanelResizers() {
+        document.querySelectorAll('.resizer').forEach(resizer => {
+            resizer.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const panelId = resizer.getAttribute('data-resize');
+                const dir = resizer.getAttribute('data-dir');
+                const panel = document.getElementById('panel-' + panelId);
+                const startX = e.clientX; const startY = e.clientY;
+                const startW = panel.offsetWidth; const startH = panel.offsetHeight;
+
+                const onMove = (ev) => {
+                    if (dir.includes('r')) panel.style.width = Math.max(200, startW + (ev.clientX - startX)) + 'px';
+                    if (dir.includes('l')) panel.style.width = Math.max(200, startW - (ev.clientX - startX)) + 'px';
+                    if (dir.includes('b')) panel.style.height = Math.max(200, startH + (ev.clientY - startY)) + 'px';
+                    if (dir.includes('t')) panel.style.height = Math.max(150, startH - (ev.clientY - startY)) + 'px';
+                };
+
+                const onUp = () => {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                };
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        });
+    }
+
+    switchTab(tabName) {
+        document.getElementById('panel-transform').classList.toggle('hidden', tabName !== 'transform');
+        document.getElementById('panel-vfx').classList.toggle('hidden', tabName !== 'vfx');
+        document.getElementById('panel-plugins').classList.toggle('hidden', tabName !== 'plugins');
+        
+        const tBtn = document.getElementById('tab-btn-transform');
+        const vBtn = document.getElementById('tab-btn-vfx');
+        const pBtn = document.getElementById('tab-btn-plugins');
+
+        const baseClass = "flex-1 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ";
+        
+        tBtn.className = baseClass + (tabName === 'transform' ? "text-blue-400 border-blue-500" : "text-gray-500 border-transparent hover:text-gray-300");
+        vBtn.className = baseClass + (tabName === 'vfx' ? "text-purple-400 border-purple-500" : "text-gray-500 border-transparent hover:text-gray-300");
+        pBtn.className = baseClass + (tabName === 'plugins' ? "text-green-400 border-green-500" : "text-gray-500 border-transparent hover:text-gray-300");
+    }
+
+    showToast(message, duration = 2000) {
+        const toast = document.getElementById('action-toast');
+        toast.innerText = message;
+        toast.classList.add('show');
+        clearTimeout(this.toastTimeout);
+        this.toastTimeout = setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    populateHierarchy() {
+        const list = document.getElementById('hierarchy-list');
+        list.innerHTML = '';
+        this.partsList.forEach(name => {
+            if(!this.rig[name]) return;
+            const div = document.createElement('div');
+            div.className = "px-2 py-1.5 rounded hover:bg-gray-700 cursor-pointer text-gray-400 text-sm flex items-center gap-2 transition-colors";
+            div.innerHTML = `<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg> ${name}`;
+            div.onclick = () => this.selectPart(this.rig[name], name, div);
+            list.appendChild(div);
+        });
+    }
+
+    onMouseDown(event) {
+        if (event.button === 2) { 
+            this.isRightMouseDown = true;
+            this.previousMousePosition = { x: event.clientX, y: event.clientY };
+            return;
+        } 
+        if (event.button === 0) { 
+            if(event.target.closest('.panel') && !event.target.closest('#canvas-container')) return;
+            if (this.transformControl.axis !== null) return;
+
+            this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            this.raycaster.setFromCamera(this.mouse, this.camera);
+            const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+
+            let found = null;
+            for (let i = 0; i < intersects.length; i++) {
+                if (intersects[i].object.userData.isRigPart) { found = intersects[i].object; break; }
+            }
+
+            if (found) {
+                const name = found.userData.name;
+                const uiEls = document.getElementById('hierarchy-list').children;
+                let uiEl = Array.from(uiEls).find(el => el.innerText.trim() === name);
+                this.selectPart(found.userData.parentGroup, name, uiEl);
+            } else {
+                this.deselect();
+            }
+        }
+    }
+
+    onMouseUp(event) { if (event.button === 2) this.isRightMouseDown = false; }
+
+    onMouseMove(event) {
+        if (this.isRightMouseDown) {
+            const dx = (event.clientX - this.previousMousePosition.x) * this.orbitSpeed;
+            const x = this.camera.position.x; const z = this.camera.position.z;
+            this.camera.position.x = x * Math.cos(dx) - z * Math.sin(dx);
+            this.camera.position.z = x * Math.sin(dx) + z * Math.cos(dx);
+            this.camera.position.y += (event.clientY - this.previousMousePosition.y) * 0.05;
+            this.camera.lookAt(0, 2, 0); 
+            this.previousMousePosition = { x: event.clientX, y: event.clientY };
+        } else {
+            // Handle Tooltip Hover
+            if(event.target.closest('.panel') || this.transformControl.axis !== null) {
+                document.getElementById('part-tooltip').classList.add('hidden');
+                return;
+            }
+            
+            this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            this.raycaster.setFromCamera(this.mouse, this.camera);
+            const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+            
+            let found = null;
+            for (let i = 0; i < intersects.length; i++) {
+                if (intersects[i].object.userData.isRigPart) { found = intersects[i].object; break; }
+            }
+
+            const tooltip = document.getElementById('part-tooltip');
+            if (found && !this.isMarquee) {
+                tooltip.style.left = (event.clientX + 15) + 'px';
+                tooltip.style.top = (event.clientY + 15) + 'px';
+                document.getElementById('tooltip-part-name').innerText = found.userData.name;
+                tooltip.classList.remove('hidden');
+            } else {
+                tooltip.classList.add('hidden');
+            }
+        }
+    }
+
+    onKeyDown(event) {
+        const key = event.key.toLowerCase();
+        if (document.activeElement.tagName === 'INPUT') return;
+        if (this.keys.hasOwnProperty(key)) this.keys[key] = true;
+
+        if (event.ctrlKey || event.metaKey) {
+            if (key === 'a') { event.preventDefault(); this.selectAllKeyframes(); }
+            else if (key === 'c') { event.preventDefault(); this.copyKeyframes(); }
+            else if (key === 'v') { event.preventDefault(); this.pasteKeyframes(); }
+        } else {
+            if (key === 'r' && this.transformControl) {
+                const newMode = this.transformControl.mode === 'rotate' ? 'translate' : 'rotate';
+                this.transformControl.setMode(newMode);
+                const badge = document.getElementById('gizmo-mode-badge');
+                if (newMode === 'translate') {
+                    badge.innerText = 'Move'; badge.className = 'bg-green-600/30 text-green-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold';
+                } else {
+                    badge.innerText = 'Rotate'; badge.className = 'bg-blue-600/30 text-blue-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold';
+                }
+            }
+            if (key === 'g' && this.transformControl) {
+                const newSpace = this.transformControl.space === 'world' ? 'local' : 'world';
+                this.transformControl.setSpace(newSpace);
+                const badge = document.getElementById('gizmo-space-badge');
+                if (newSpace === 'world') {
+                    badge.innerText = 'World'; badge.className = 'bg-purple-600/30 text-purple-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold';
+                } else {
+                    badge.innerText = 'Part'; badge.className = 'bg-orange-600/30 text-orange-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold';
+                }
+            }
+            if (key === 'm') this.smoothSelectedKeyframes();
+            if (key === 'delete' || key === 'backspace') this.deleteSelectedKeyframes();
+        }
+    }
+
+    onKeyUp(event) {
+        const key = event.key.toLowerCase();
+        if (this.keys.hasOwnProperty(key)) this.keys[key] = false;
+    }
+
+    updateCameraMovement() {
+        if (document.activeElement.tagName === 'INPUT') return;
+        const dir = new THREE.Vector3();
+        this.camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
+        const right = new THREE.Vector3(); right.crossVectors(dir, new THREE.Vector3(0, 1, 0));
+
+        if (this.keys.w) this.camera.position.addScaledVector(dir, this.cameraSpeed);
+        if (this.keys.s) this.camera.position.addScaledVector(dir, -this.cameraSpeed);
+        if (this.keys.a) this.camera.position.addScaledVector(right, -this.cameraSpeed);
+        if (this.keys.d) this.camera.position.addScaledVector(right, this.cameraSpeed);
+        if (this.keys.e) this.camera.position.y += this.cameraSpeed;
+        if (this.keys.q) this.camera.position.y -= this.cameraSpeed;
+    }
+
+    selectPart(object3D, name, domElement) {
+        if (this.selectedObject) {
+            this.setEmissiveHighlight(this.selectedObject, 0x000000);
+            if(this.selectedDom) this.selectedDom.classList.remove('bg-blue-900', 'text-white');
+        }
+
+        this.selectedObject = object3D;
+        this.selectedDom = domElement;
+
+        this.setEmissiveHighlight(object3D, 0x222222);
+
+        if(domElement) {
+            domElement.classList.add('bg-blue-900', 'text-white');
+            domElement.classList.remove('text-gray-400');
+        }
+
+        document.getElementById('selected-part-name').innerText = name;
+        this.updateUIValues();
+        this.transformControl.attach(object3D);
+    }
+
+    deselect() {
+        if (this.selectedObject) this.setEmissiveHighlight(this.selectedObject, 0x000000);
+        this.selectedObject = null;
+        document.getElementById('selected-part-name').innerText = "None";
+        this.transformControl.detach();
+    }
+
+    updateUIValues() {
+        if (!this.selectedObject) return;
+        const r2d = THREE.MathUtils.radToDeg;
+        document.getElementById('pos-x').value = this.selectedObject.position.x.toFixed(3);
+        document.getElementById('pos-y').value = this.selectedObject.position.y.toFixed(3);
+        document.getElementById('pos-z').value = this.selectedObject.position.z.toFixed(3);
+        document.getElementById('rot-x').value = r2d(this.selectedObject.rotation.x).toFixed(1);
+        document.getElementById('rot-y').value = r2d(this.selectedObject.rotation.y).toFixed(1);
+        document.getElementById('rot-z').value = r2d(this.selectedObject.rotation.z).toFixed(1);
+    }
+
+    updateTransform(type, axis, value) {
+        if (!this.selectedObject) return;
+        const val = parseFloat(value); if (isNaN(val)) return;
+        const d2r = THREE.MathUtils.degToRad;
+        if (type === 'position') this.selectedObject.position[axis] = val;
+        else this.selectedObject.rotation[axis] = d2r(val);
+        this.keyframeCurrent(true);
+        this.autoSave();
+    }
+
+    // --- TIMELINE & KEYFRAMING LOGIC ---
+
+    setupTimelineInteractions() {
+        const ruler = document.getElementById('timeline-ruler');
+        const tracks = document.getElementById('timeline-tracks-container');
+        const labels = document.getElementById('track-labels');
+
+        ruler.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            this.handleScrub(e);
+            const onMove = (evt) => this.handleScrub(evt);
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                this.autoSave();
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+
+        tracks.addEventListener('mousedown', (e) => {
+            if(e.target.closest('.keyframe-dot') || e.target.closest('#timeline-ruler')) return;
+            this.startMarquee(e);
+        });
+
+        tracks.addEventListener('scroll', (e) => {
+            labels.scrollTop = e.target.scrollTop;
+        });
+    }
+
+    handleScrub(event) {
+        const tracksArea = document.getElementById('timeline-tracks-container');
+        const rect = tracksArea.getBoundingClientRect();
+        const scrollLeft = tracksArea.scrollLeft;
+        
+        let x = event.clientX - rect.left + scrollLeft;
+        let totalWidth = rect.width; 
+
+        const pct = Math.max(0, Math.min(1, x / totalWidth));
+        this.currentFrame = Math.floor(pct * this.totalFrames);
+        this.updateScrubber();
+        this.applyFrame(this.currentFrame);
+    }
+
+    startMarquee(e) {
+        this.isMarquee = true;
+        document.getElementById('part-tooltip').classList.add('hidden');
+        
+        const container = document.getElementById('timeline-tracks-container');
+        const box = document.getElementById('selection-box');
+        const rect = container.getBoundingClientRect();
+
+        this.marqueeStart.x = e.clientX - rect.left + container.scrollLeft;
+        this.marqueeStart.y = e.clientY - rect.top + container.scrollTop;
+        
+        box.style.left = `${this.marqueeStart.x}px`;
+        box.style.top = `${this.marqueeStart.y}px`;
+        box.style.width = '0px';
+        box.style.height = '0px';
+        box.classList.remove('hidden');
+
+        if (!e.shiftKey && !e.ctrlKey) { this.selectedKeyframes.clear(); }
+        this.preMarqueeSelection = new Set(this.selectedKeyframes);
+        this.renderKeyframesUI(); 
+
+        const onMove = (evt) => this.updateMarquee(evt);
+        const onUp = () => {
+            this.isMarquee = false;
+            box.classList.add('hidden');
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            this.renderKeyframesUI(); 
+        };
+
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    }
+
+    updateMarquee(e) {
+        const container = document.getElementById('timeline-tracks-container');
+        const box = document.getElementById('selection-box');
+        const rect = container.getBoundingClientRect();
+
+        let curX = e.clientX - rect.left + container.scrollLeft;
+        let curY = e.clientY - rect.top + container.scrollTop;
+
+        curX = Math.max(0, Math.min(container.scrollWidth, curX));
+        curY = Math.max(0, Math.min(container.scrollHeight, curY));
+
+        const left = Math.min(this.marqueeStart.x, curX);
+        const top = Math.min(this.marqueeStart.y, curY);
+        const width = Math.abs(curX - this.marqueeStart.x);
+        const height = Math.abs(curY - this.marqueeStart.y);
+
+        box.style.left = `${left}px`;
+        box.style.top = `${top}px`;
+        box.style.width = `${width}px`;
+        box.style.height = `${height}px`;
+
+        const boxRect = box.getBoundingClientRect();
+        const dots = container.querySelectorAll('.keyframe-dot');
+        
+        this.selectedKeyframes = new Set(this.preMarqueeSelection);
+
+        dots.forEach(dot => {
+            const dotRect = dot.getBoundingClientRect();
+            const intersect = !(boxRect.right < dotRect.left || boxRect.left > dotRect.right || 
+                                boxRect.bottom < dotRect.top || boxRect.top > dotRect.bottom);
+            
+            if (intersect) {
+                const p = dot.dataset.part;
+                const f = parseInt(dot.dataset.frame);
+                const kf = this.keyframes[p]?.find(k => k.frame === f);
+                if(kf) {
+                    this.selectedKeyframes.add(kf);
+                    dot.classList.add('selected');
+                }
+            } else {
+                const p = dot.dataset.part;
+                const f = parseInt(dot.dataset.frame);
+                const kf = this.keyframes[p]?.find(k => k.frame === f);
+                if(!this.preMarqueeSelection.has(kf)) dot.classList.remove('selected');
+                else dot.classList.add('selected');
+            }
+        });
+    }
+
+    renderKeyframesUI() {
+        const labelsContainer = document.getElementById('labels-container');
+        const tracksContainer = document.getElementById('keyframes-container');
+        
+        labelsContainer.innerHTML = '';
+        tracksContainer.innerHTML = '';
+
+        this.partsList.forEach(partName => {
+            const label = document.createElement('div');
+            label.className = 'h-10 flex items-center px-3 text-[11px] font-bold text-gray-400 border-b border-gray-700 bg-gray-800/50 whitespace-nowrap overflow-hidden text-ellipsis';
+            label.innerText = partName;
+            labelsContainer.appendChild(label);
+            
+            const row = document.createElement('div');
+            row.className = 'h-10 border-b border-gray-700/50 relative w-full bg-gray-800/10 hover:bg-gray-800/30 transition-colors';
+            
+            if (this.keyframes[partName]) {
+                this.keyframes[partName].forEach(kf => {
+                    const pct = (kf.frame / this.totalFrames) * 100;
+                    const dot = document.createElement('div');
+                    dot.className = 'keyframe-dot';
+                    if (this.selectedKeyframes.has(kf)) dot.classList.add('selected');
+                    dot.style.left = `calc(${pct}%)`; 
+                    
+                    dot.dataset.part = partName;
+                    dot.dataset.frame = kf.frame;
+                    
+                    dot.onmousedown = (e) => this.onKeyframeMouseDown(e, partName, kf);
+                    row.appendChild(dot);
+                });
+            }
+            tracksContainer.appendChild(row);
+        });
+    }
+
+    onKeyframeMouseDown(event, partName, kf) {
+        event.stopPropagation(); 
+        if (event.ctrlKey || event.shiftKey || event.metaKey) {
+            if (this.selectedKeyframes.has(kf)) this.selectedKeyframes.delete(kf);
+            else this.selectedKeyframes.add(kf);
+        } else {
+            if (!this.selectedKeyframes.has(kf)) {
+                this.selectedKeyframes.clear();
+                this.selectedKeyframes.add(kf);
+            }
+        }
+        this.renderKeyframesUI();
+
+        this.isDraggingKeyframes = true;
+        const startX = event.clientX;
+        const container = document.getElementById('timeline-tracks-container');
+        
+        this.selectedKeyframes.forEach(skf => skf._startDragFrame = skf.frame);
+        
+        const onMouseMove = (e) => {
+            const deltaX = e.clientX - startX;
+            const deltaFrame = Math.round((deltaX / container.getBoundingClientRect().width) * this.totalFrames);
+            
+            this.selectedKeyframes.forEach(skf => {
+                let newFrame = skf._startDragFrame + deltaFrame;
+                newFrame = Math.max(0, Math.min(this.totalFrames, newFrame));
+                skf.frame = newFrame;
+            });
+            this.renderKeyframesUI();
+        };
+
+        const onMouseUp = () => {
+            this.isDraggingKeyframes = false;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            Object.keys(this.keyframes).forEach(name => this.keyframes[name].sort((a,b) => a.frame - b.frame));
+            this.applyFrame(this.currentFrame);
+            this.autoSave();
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    }
+
+    keyframeCurrent(isAuto = false) {
+        if(!this.selectedObject) return;
+        const name = document.getElementById('selected-part-name').innerText;
+        if(name === "None") return;
+
+        if(!this.keyframes[name]) this.keyframes[name] = [];
+        let existingKf = this.keyframes[name].find(k => k.frame === this.currentFrame);
+
+        if (existingKf) {
+            existingKf.position.copy(this.selectedObject.position);
+            existingKf.rotation.copy(this.selectedObject.rotation);
+            if (!isAuto) {
+                this.selectedKeyframes.clear();
+                this.selectedKeyframes.add(existingKf);
+                this.renderKeyframesUI();
+                this.showToast("Keyframe Updated");
+            }
+        } else {
+            const newKf = {
+                frame: this.currentFrame, position: this.selectedObject.position.clone(),
+                rotation: this.selectedObject.rotation.clone(), _partName: name
+            };
+            this.keyframes[name].push(newKf);
+            this.keyframes[name].sort((a,b) => a.frame - b.frame);
+            
+            if (!isAuto) {
+                this.selectedKeyframes.clear();
+                this.selectedKeyframes.add(newKf);
+            }
+            this.renderKeyframesUI();
+            if(!isAuto) this.showToast("Keyframe Added");
+        }
+        if (!isAuto) this.autoSave(); 
+    }
+
+    updateScrubber() {
+        const pct = (this.currentFrame / this.totalFrames) * 100;
+        document.getElementById('scrubber').style.left = `${pct}%`;
+        
+        const sec = Math.floor(this.currentFrame / this.fps);
+        const frm = this.currentFrame % this.fps;
+        const totSec = Math.floor(this.totalFrames / this.fps);
+        document.getElementById('time-display').innerText = `${sec.toString().padStart(2,'0')}:${frm.toString().padStart(2,'0')} / ${totSec.toString().padStart(2,'0')}:00`;
+    }
+
+    applyFrame(frame) {
+        Object.keys(this.keyframes).forEach(name => {
+            const kfs = this.keyframes[name];
+            const obj = this.rig[name];
+            if(!obj || kfs.length === 0) return;
+
+            let prev = kfs[0]; let next = kfs[kfs.length-1];
+            for(let i=0; i<kfs.length; i++) {
+                if(kfs[i].frame <= frame) prev = kfs[i];
+                if(kfs[i].frame >= frame) { next = kfs[i]; break; }
+            }
+
+            if(prev.frame === next.frame) {
+                obj.position.copy(prev.position); obj.rotation.copy(prev.rotation);
+            } else {
+                const progress = (frame - prev.frame) / (next.frame - prev.frame);
+                obj.position.lerpVectors(prev.position, next.position, progress);
+                const qPrev = new THREE.Quaternion().setFromEuler(prev.rotation);
+                const qNext = new THREE.Quaternion().setFromEuler(next.rotation);
+                obj.rotation.setFromQuaternion(new THREE.Quaternion().copy(qPrev).slerp(qNext, progress));
+            }
+        });
+        
+        if (this.selectedObject && this.keyframes[document.getElementById('selected-part-name').innerText]) {
+            this.updateUIValues();
+            if(this.transformControl) this.transformControl.updateMatrixWorld();
+        }
+    }
+
+    togglePlay() {
+        this.isPlaying = !this.isPlaying;
+        document.getElementById('play-btn').innerHTML = this.isPlaying 
+            ? '<svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
+            : '<svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+    }
+
+    selectAllKeyframes() {
+        this.selectedKeyframes.clear();
+        Object.values(this.keyframes).forEach(track => track.forEach(kf => this.selectedKeyframes.add(kf)));
+        this.renderKeyframesUI();
+        this.showToast("All Keyframes Selected");
+    }
+
+    copyKeyframes() {
+        if (this.selectedKeyframes.size === 0) return;
+        this.clipboard = [];
+        let minFrame = Infinity;
+        this.selectedKeyframes.forEach(kf => { if (kf.frame < minFrame) minFrame = kf.frame; });
+
+        this.selectedKeyframes.forEach(kf => {
+            this.clipboard.push({ partName: kf._partName, frameOffset: kf.frame - minFrame, position: kf.position.clone(), rotation: kf.rotation.clone() });
+        });
+        this.showToast("Keyframes Copied");
+    }
+
+    pasteKeyframes() {
+        if (this.clipboard.length === 0) return;
+        this.selectedKeyframes.clear();
+        this.clipboard.forEach(clip => {
+            const targetFrame = this.currentFrame + clip.frameOffset;
+            if (targetFrame > this.totalFrames || targetFrame < 0) return;
+            if (!this.keyframes[clip.partName]) this.keyframes[clip.partName] = [];
+            this.keyframes[clip.partName] = this.keyframes[clip.partName].filter(k => k.frame !== targetFrame);
+
+            const newKf = { frame: targetFrame, position: clip.position.clone(), rotation: clip.rotation.clone(), _partName: clip.partName };
+            this.keyframes[clip.partName].push(newKf);
+            this.selectedKeyframes.add(newKf);
+        });
+        Object.keys(this.keyframes).forEach(name => this.keyframes[name].sort((a,b) => a.frame - b.frame));
+        this.renderKeyframesUI();
+        this.applyFrame(this.currentFrame);
+        this.showToast("Keyframes Pasted");
+        this.autoSave();
+    }
+
+    deleteSelectedKeyframes() {
+        if (this.selectedKeyframes.size === 0) return;
+        Object.keys(this.keyframes).forEach(partName => {
+            this.keyframes[partName] = this.keyframes[partName].filter(kf => !this.selectedKeyframes.has(kf));
+        });
+        this.selectedKeyframes.clear();
+        this.renderKeyframesUI();
+        this.applyFrame(this.currentFrame);
+        this.showToast("Keyframes Deleted");
+        this.autoSave();
+    }
+
+    smoothSelectedKeyframes() {
+        if (this.selectedKeyframes.size === 0) { this.showToast("Select keyframes first"); return; }
+        
+        const groups = {};
+        this.selectedKeyframes.forEach(kf => {
+            if (!groups[kf._partName]) groups[kf._partName] = [];
+            groups[kf._partName].push(kf);
+        });
+        
+        let smoothedCount = 0;
+        const iterations = 3; 
+
+        Object.keys(groups).forEach(partName => {
+            const track = this.keyframes[partName];
+            groups[partName].sort((a,b) => a.frame - b.frame);
+            
+            for (let iter = 0; iter < iterations; iter++) {
+                const tempPos = new Map();
+                const tempRot = new Map();
+
+                groups[partName].forEach(kf => {
+                    const idx = track.indexOf(kf);
+                    if (idx > 0 && idx < track.length - 1) {
+                        const prev = track[idx - 1];
+                        const next = track[idx + 1];
+                        
+                        const avgPos = new THREE.Vector3().addVectors(prev.position, next.position).multiplyScalar(0.5);
+                        const newPos = new THREE.Vector3().copy(kf.position).lerp(avgPos, 0.5);
+                        tempPos.set(kf, newPos);
+
+                        const qPrev = new THREE.Quaternion().setFromEuler(prev.rotation);
+                        const qNext = new THREE.Quaternion().setFromEuler(next.rotation);
+                        const qAvg = qPrev.clone().slerp(qNext, 0.5);
+                        
+                        const qCurr = new THREE.Quaternion().setFromEuler(kf.rotation);
+                        const newRot = qCurr.clone().slerp(qAvg, 0.5);
+                        tempRot.set(kf, newRot);
+                        
+                        smoothedCount++;
+                    }
+                });
+
+                tempPos.forEach((pos, kf) => kf.position.copy(pos));
+                tempRot.forEach((rot, kf) => kf.rotation.setFromQuaternion(rot));
+            }
+        });
+
+        if (smoothedCount > 0) {
+            this.applyFrame(this.currentFrame); 
+            this.updateUIValues();
+            this.showToast("Curves Smoothed Beautifully!"); 
+            this.autoSave();
+        } else { 
+            this.showToast("Requires selected inner keyframes"); 
+        }
+    }
+
+    serializeAnimation() {
+        const animName = document.getElementById('anim-name').value || 'Animation';
+        return JSON.stringify({ 
+            version: "1.5_R6", name: animName, totalFrames: this.totalFrames, 
+            fps: this.fps, currentFrame: this.currentFrame, tracks: this.keyframes 
+        }, (key, value) => {
+            if (value && value.isVector3) return {x:value.x, y:value.y, z:value.z};
+            if (value && value.isEuler) return {x:value.x, y:value.y, z:value.z, order:value.order};
+            if (key === '_partName' || key === '_startDragFrame') return undefined; 
+            return value;
+        }, 2);
+    }
+
+    loadAnimationData(parsed) {
+        if (!parsed.tracks) return;
+        if (parsed.name) document.getElementById('anim-name').value = parsed.name;
+        
+        const importedKeyframes = {};
+        for (const [partName, track] of Object.entries(parsed.tracks)) {
+            importedKeyframes[partName] = track.map(kf => ({
+                frame: kf.frame, _partName: partName,
+                position: new THREE.Vector3(kf.position.x, kf.position.y, kf.position.z),
+                rotation: new THREE.Euler(kf.rotation.x, kf.rotation.y, kf.rotation.z, kf.rotation.order || 'XYZ')
+            }));
+        }
+        this.keyframes = importedKeyframes;
+        if (parsed.totalFrames) this.totalFrames = parsed.totalFrames;
+        if (parsed.fps) this.fps = parsed.fps;
+        if (parsed.currentFrame !== undefined) this.currentFrame = parsed.currentFrame;
+        
+        this.selectedKeyframes.clear();
+        this.renderKeyframesUI();
+        this.updateScrubber();
+        this.applyFrame(this.currentFrame);
+    }
+
+    autoSave() {
+        try { localStorage.setItem('moonAnimatorState', this.serializeAnimation()); } catch (e) {}
+    }
+
+    loadAutoSave() {
+        const savedData = localStorage.getItem('moonAnimatorState');
+        if (savedData) {
+            try { this.loadAnimationData(JSON.parse(savedData)); this.showToast("Auto-save Restored", 3000); } catch (e) {}
+        }
+    }
+
+    exportAnimation() {
+        const name = document.getElementById('anim-name').value || 'r6_animation';
+        const safeName = name.replace(/[^a-z0-9_-]/gi, '_'); // Sanitize filename
+        const url = URL.createObjectURL(new Blob([this.serializeAnimation()], {type: 'application/json'}));
+        const a = document.createElement('a');
+        a.href = url; a.download = `${safeName}.json`;
+        a.click(); URL.revokeObjectURL(url);
+        this.showToast(`Exported ${safeName}.json`);
+    }
+
+    handleImport(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                this.loadAnimationData(JSON.parse(e.target.result)); this.autoSave(); this.showToast("Animation Imported");
+            } catch (err) { alert("Invalid JSON file."); }
+        };
+        reader.readAsText(file);
+        event.target.value = ""; 
+    }
+
+    onWindowResize() {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    animate(time) {
+        requestAnimationFrame((t) => this.animate(t));
+        this.updateCameraMovement();
+
+        if(this.isPlaying) {
+            if(time - this.lastTime > 1000/this.fps) {
+                this.currentFrame++;
+                if(this.currentFrame > this.totalFrames) this.currentFrame = 0;
+                this.updateScrubber();
+                this.applyFrame(this.currentFrame);
+                this.lastTime = time;
+            }
+        }
+        this.renderer.render(this.scene, this.camera);
+    }
+}
+
+const app = new AnimationApp();
+</script>
 </body>
 </html>
