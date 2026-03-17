@@ -106,7 +106,7 @@
     <div class="absolute top-0 left-0 w-full h-14 panel flex items-center justify-between px-4 z-20 border-b border-gray-700" style="position: fixed;">
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/50">M</div>
-            <h1 class="text-gray-200 font-semibold tracking-wide flex items-center gap-2">Moon Animator <span class="text-xs text-blue-400 font-normal">v1.5</span></h1>
+            <h1 class="text-gray-200 font-semibold tracking-wide flex items-center gap-2">Moon Animator <span class="text-xs text-blue-400 font-normal">v1.6.0</span></h1>
             
             <div class="w-px h-6 bg-gray-600 mx-2"></div>
             <input type="text" id="anim-name" value="My_Animation" class="bg-gray-900 border border-gray-600 text-gray-300 text-sm px-2 py-1 rounded focus:border-blue-500 outline-none w-48" placeholder="Animation Name" title="Animation Name">
@@ -115,10 +115,6 @@
         </div>
         
         <div class="flex items-center gap-2">
-            <button onclick="document.getElementById('update-log-modal').classList.remove('hidden')" class="btn-secondary px-3 py-1.5 rounded text-sm font-medium mr-4 flex items-center gap-2 text-blue-300 border-blue-800/50">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Update Log
-            </button>
             <button onclick="app.smoothSelectedKeyframes()" class="btn-secondary px-3 py-1.5 rounded text-sm font-medium mr-2" title="Hotkey: M">Smooth (M)</button>
             <input type="file" id="import-file" class="hidden" accept=".json" onchange="app.handleImport(event)">
             <button onclick="document.getElementById('import-file').click()" class="btn-secondary px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2">Import</button>
@@ -132,16 +128,16 @@
         <div class="resizer resizer-b" data-resize="hierarchy" data-dir="b"></div>
         <div class="resizer resizer-br" data-resize="hierarchy" data-dir="br"></div>
         
-        <div class="p-3 border-b border-gray-700 font-semibold text-gray-300 text-sm cursor-move drag-handle" data-target="panel-hierarchy">R6 Rig Hierarchy</div>
+        <div class="p-3 border-b border-gray-700 font-semibold text-gray-300 text-sm cursor-move drag-handle" data-target="panel-hierarchy">Scene Hierarchy</div>
         <div id="hierarchy-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
         <div class="p-3 border-t border-gray-700 bg-gray-900/50 rounded-b-lg">
-            <div class="text-xs text-gray-500 mb-1">Selected Part</div>
+            <div class="text-xs text-gray-500 mb-1">Selected Object</div>
             <div id="selected-part-name" class="text-blue-400 font-mono text-sm">None</div>
         </div>
     </div>
 
     <!-- Right Sidebar (Properties, VFX & Plugins Tabs) -->
-    <div id="panel-properties" class="panel rounded-lg flex flex-col z-10 overflow-hidden" style="top: 4.5rem; right: 1rem; width: 320px; height: 420px;">
+    <div id="panel-properties" class="panel rounded-lg flex flex-col z-10 overflow-hidden" style="top: 4.5rem; right: 1rem; width: 320px; height: 450px;">
         <div class="resizer resizer-l" data-resize="properties" data-dir="l"></div>
         <div class="resizer resizer-b" data-resize="properties" data-dir="b"></div>
         <div class="resizer resizer-bl" data-resize="properties" data-dir="bl"></div>
@@ -198,12 +194,26 @@
         <div id="panel-plugins" class="hidden flex-1 flex flex-col p-4 bg-gray-900/50 overflow-y-auto space-y-3">
             <h3 class="font-bold text-gray-200 text-sm border-b border-gray-700 pb-2 mb-1">Available Plugins</h3>
             
+            <!-- Plugin: Maps & Build -->
+            <div class="bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-700/50 p-3 rounded-lg flex flex-col gap-3 shadow-md">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="text-purple-300 font-bold text-sm flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            Maps & Build
+                        </h4>
+                        <p class="text-[11px] text-gray-300 mt-1 leading-tight">Create and Animate!!! Spawn beds, desks, and more, then animate them reacting to your rig!</p>
+                    </div>
+                    <button onclick="document.getElementById('maps-build-modal').classList.remove('hidden')" class="btn-primary px-3 py-1.5 rounded text-xs font-bold transition-all shadow-lg shadow-purple-900/50">Open</button>
+                </div>
+            </div>
+
             <!-- Plugin: Labeled Parts -->
-            <div class="bg-gray-800 border border-gray-700 p-3 rounded-lg flex flex-col gap-3 shadow-md">
+            <div class="bg-gray-800 border border-gray-700 p-3 rounded-lg flex flex-col gap-3 shadow-md mt-2">
                 <div class="flex justify-between items-start">
                     <div>
                         <h4 class="text-green-400 font-bold text-sm flex items-center gap-1.5">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
                             Labeled Parts
                         </h4>
                         <p class="text-[11px] text-gray-400 mt-1 leading-tight">Labels your Parts with letters and colors. Mapped beautifully to all 6 faces of every part.</p>
@@ -211,8 +221,6 @@
                     <button id="btn-plugin-labeled" onclick="app.toggleLabeledPartsPlugin()" class="btn-secondary px-3 py-1.5 rounded text-xs font-bold transition-all border-green-700/50 hover:border-green-500">Install</button>
                 </div>
             </div>
-            
-            <!-- More plugins can be added here easily later -->
         </div>
     </div>
 
@@ -257,31 +265,66 @@
         </div>
     </div>
 
-    <!-- Update Log Modal -->
-    <div id="update-log-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm hidden">
-        <div class="panel w-[30rem] rounded-xl p-6 shadow-2xl border border-gray-600">
-            <h2 class="text-2xl font-bold text-white mb-4 flex items-center gap-3 border-b border-gray-700 pb-3">
-                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                Update Log
-            </h2>
-            <div class="space-y-5 max-h-80 overflow-y-auto text-sm pr-2 pb-2">
-                <div>
-                    <h3 class="text-blue-400 font-bold text-base">v1.5 - Multi-Face Texturing!</h3>
-                    <ul class="list-disc pl-5 mt-2 space-y-1.5 text-gray-200">
-                        <li><span class="text-white font-semibold">Face Mapping:</span> The default noob head now appropriately only has a smiley face on the front! All other sides remain standard yellow.</li>
-                        <li><span class="text-white font-semibold">Labeled Parts Overhaul:</span> The plugin correctly marks T, L, R, FRONT, and BACK using a cached canvas material array. Try it out!</li>
-                        <li><span class="text-white font-semibold">Plugins System added!</span> Access the Plugins tab next to VFX to easily toggle testing plugins.</li>
-                    </ul>
+    <!-- Maps & Build Plugin Modal -->
+    <div id="maps-build-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div class="bg-gray-900/95 border border-purple-500/50 w-[700px] h-[500px] rounded-2xl shadow-[0_0_40px_rgba(168,85,247,0.3)] flex flex-col overflow-hidden transform transition-all">
+            
+            <!-- Modal Header -->
+            <div class="h-16 bg-gradient-to-r from-purple-900/80 to-blue-900/80 flex items-center justify-between px-6 border-b border-gray-700 shadow-md">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center shadow-lg border border-purple-400/50">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-white font-bold text-xl tracking-wide">Maps & Build <span class="text-[10px] align-top bg-gradient-to-r from-pink-500 to-purple-500 text-white px-1.5 py-0.5 rounded-full uppercase ml-1">Pro</span></h2>
+                        <p class="text-xs text-purple-200 opacity-80">Click an item to spawn it into your scene!</p>
+                    </div>
                 </div>
+                <button onclick="document.getElementById('maps-build-modal').classList.add('hidden')" class="text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 p-2 rounded-full transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
-            <button onclick="document.getElementById('update-log-modal').classList.add('hidden')" class="mt-6 w-full btn-primary py-2.5 rounded font-bold uppercase tracking-wide">Awesome!</button>
+
+            <!-- Modal Content (Grid) -->
+            <div class="flex-1 p-6 overflow-y-auto bg-gray-900/80 grid grid-cols-2 md:grid-cols-3 gap-6">
+                
+                <!-- Item: Desk -->
+                <div onclick="app.spawnProp('Desk')" class="bg-gray-800 border border-gray-700 hover:border-purple-500 hover:bg-gray-750 transition-all rounded-xl p-4 flex flex-col items-center cursor-pointer group shadow-lg hover:shadow-purple-900/40 hover:-translate-y-1">
+                    <div class="w-full h-32 bg-gradient-to-b from-gray-700 to-gray-900 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden border border-gray-600/50">
+                        <span class="text-6xl filter drop-shadow-lg transform group-hover:scale-110 transition-transform">🪑</span>
+                        <div class="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    </div>
+                    <h3 class="text-white font-bold w-full text-center">Wooden Desk</h3>
+                    <p class="text-[11px] text-gray-400 w-full text-center mt-1">A classic solid desk. Perfect for kicking!</p>
+                </div>
+
+                <!-- Item: Bed -->
+                <div onclick="app.spawnProp('Bed')" class="bg-gray-800 border border-gray-700 hover:border-purple-500 hover:bg-gray-750 transition-all rounded-xl p-4 flex flex-col items-center cursor-pointer group shadow-lg hover:shadow-purple-900/40 hover:-translate-y-1">
+                    <div class="w-full h-32 bg-gradient-to-b from-gray-700 to-gray-900 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden border border-gray-600/50">
+                        <span class="text-6xl filter drop-shadow-lg transform group-hover:scale-110 transition-transform">🛏️</span>
+                        <div class="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    </div>
+                    <h3 class="text-white font-bold w-full text-center">Cozy Bed</h3>
+                    <p class="text-[11px] text-gray-400 w-full text-center mt-1">Complete with mattress and pillow.</p>
+                </div>
+
+                <!-- Coming Soon Placeholder -->
+                <div class="bg-gray-800/50 border border-gray-700/50 border-dashed rounded-xl p-4 flex flex-col items-center justify-center opacity-60">
+                    <span class="text-4xl mb-2 text-gray-500">🧱</span>
+                    <h3 class="text-gray-400 font-bold text-center">More Builds</h3>
+                    <p class="text-[11px] text-gray-500 text-center mt-1">Coming in next update</p>
+                </div>
+
+            </div>
         </div>
     </div>
 
+
 <script>
 /**
- * MOON ANIMATOR WEB STUDIO - v1.5
- * Featuring independent multi-face materials (array materials) and the Labeled Parts Plugin.
+ * MOON ANIMATOR WEB STUDIO - v1.6.0
+ * Added Maps & Build dynamic prop spawning system! Props are fully integrated into 
+ * the timeline, hierarchy, raycasting, selection, and auto-save systems!
  */
 
 class AnimationApp {
@@ -291,18 +334,20 @@ class AnimationApp {
         this.camera = null;
         this.renderer = null;
         this.transformControl = null;
+        
+        // Scene Data Structure
         this.rig = {}; 
         this.partsList = ['Torso', 'Head', 'Left Arm', 'Right Arm', 'Left Leg', 'Right Leg'];
+        this.spawnedProps = []; // Keeps track of spawned dynamic props for saving/loading
+
         this.selectedObject = null;
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
         
-        this.textureCache = {}; // Cache for heavily drawn canvas textures to keep WebGL blazing fast
+        this.textureCache = {}; 
         
         // Plugin States
-        this.plugins = {
-            labeledParts: { installed: false }
-        };
+        this.plugins = { labeledParts: { installed: false } };
 
         // Animation State
         this.isPlaying = false;
@@ -387,69 +432,40 @@ class AnimationApp {
     // --- MATERIAL & TEXTURE GENERATION SYSTEM ---
 
     createFaceMaterial(opts) {
-        // Generates either a pure color material or a robust cached canvas texture.
         const key = JSON.stringify(opts);
-        
         if (!opts.drawSmiley && !opts.drawBorders && !opts.text) {
             return new THREE.MeshStandardMaterial({ color: new THREE.Color(opts.bgColor), roughness: 0.6 });
         }
-
         let tex = this.textureCache[key];
         if (!tex) {
             const canvas = document.createElement('canvas');
-            canvas.width = 256;
-            canvas.height = 256;
+            canvas.width = 256; canvas.height = 256;
             const ctx = canvas.getContext('2d');
             
-            // Background
             ctx.fillStyle = opts.bgColor || '#ffffff';
             ctx.fillRect(0, 0, 256, 256);
             
-            // Developer borders
             if (opts.drawBorders) {
-                ctx.lineWidth = 12;
-                ctx.strokeStyle = '#00FF00'; // Green Side Lines
+                ctx.lineWidth = 12; ctx.strokeStyle = '#00FF00';
                 ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(6, 256); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(250, 0); ctx.lineTo(250, 256); ctx.stroke();
-                
-                ctx.strokeStyle = '#0088FF'; // Blue Horizontal Lines
+                ctx.strokeStyle = '#0088FF';
                 ctx.beginPath(); ctx.moveTo(0, 6); ctx.lineTo(256, 6); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(0, 250); ctx.lineTo(256, 250); ctx.stroke();
             }
-            
-            // Classic Smiley Face
             if (opts.drawSmiley) {
-                ctx.fillStyle = '#000000';
-                // Eyes
-                ctx.fillRect(80, 80, 20, 40);
-                ctx.fillRect(156, 80, 20, 40);
-                // Smile Arc
-                ctx.beginPath();
-                ctx.arc(128, 140, 40, 0, Math.PI, false);
-                ctx.lineWidth = 12;
-                ctx.strokeStyle = '#000000';
-                ctx.stroke();
+                ctx.fillStyle = '#000000'; ctx.fillRect(80, 80, 20, 40); ctx.fillRect(156, 80, 20, 40);
+                ctx.beginPath(); ctx.arc(128, 140, 40, 0, Math.PI, false);
+                ctx.lineWidth = 12; ctx.strokeStyle = '#000000'; ctx.stroke();
             }
-            
-            // Lettering
             if (opts.text) {
-                ctx.fillStyle = '#E5E4E2'; // Off-white
-                ctx.font = 'bold 80px "Segoe UI", Arial, sans-serif';
-                if (opts.text === 'FRONT' || opts.text === 'BACK') {
-                    ctx.font = 'bold 45px "Segoe UI", Arial, sans-serif'; // Shrink large text
-                }
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(opts.text, 128, 128);
+                ctx.fillStyle = '#E5E4E2'; ctx.font = 'bold 80px "Segoe UI", Arial, sans-serif';
+                if (opts.text === 'FRONT' || opts.text === 'BACK') ctx.font = 'bold 45px "Segoe UI", Arial, sans-serif'; 
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(opts.text, 128, 128);
             }
-            
-            tex = new THREE.CanvasTexture(canvas);
-            tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+            tex = new THREE.CanvasTexture(canvas); tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
             this.textureCache[key] = tex;
         }
-        
-        // Return a fresh material utilizing the cached texture 
-        // This is crucial so setting .emissive on one part doesn't highlight everything
         return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, color: 0xffffff });
     }
 
@@ -457,11 +473,8 @@ class AnimationApp {
         if(!object3D) return;
         object3D.traverse(c => {
             if (c.isMesh) {
-                if (Array.isArray(c.material)) {
-                    c.material.forEach(m => m.emissive.setHex(hexColor));
-                } else {
-                    c.material.emissive.setHex(hexColor);
-                }
+                if (Array.isArray(c.material)) c.material.forEach(m => m.emissive.setHex(hexColor));
+                else c.material.emissive.setHex(hexColor);
             }
         });
     }
@@ -474,24 +487,23 @@ class AnimationApp {
         const createPart = (name, w, h, d, parent, px, py, pz, pivotOffset) => {
             const group = new THREE.Group();
             group.position.set(px, py, pz);
+            group.userData.defaultPosition = group.position.clone();
+            group.userData.defaultRotation = group.rotation.clone();
+
             const geo = new THREE.RoundedBoxGeometry(w, h, d, 4, 0.08);
             geo.translate(0, pivotOffset, 0); 
             
             let mats;
             if (name === 'Head') {
-                // The head only has the smiley on Face 4 (Front)
                 mats = [
-                    this.createFaceMaterial({ bgColor: '#f6d743' }), // 0: Right (+x)
-                    this.createFaceMaterial({ bgColor: '#f6d743' }), // 1: Left (-x)
-                    this.createFaceMaterial({ bgColor: '#f6d743' }), // 2: Top (+y)
-                    this.createFaceMaterial({ bgColor: '#f6d743' }), // 3: Bottom (-y)
-                    this.createFaceMaterial({ bgColor: '#f6d743', drawSmiley: true }), // 4: Front (+z)
-                    this.createFaceMaterial({ bgColor: '#f6d743' })  // 5: Back (-z)
+                    this.createFaceMaterial({ bgColor: '#f6d743' }), this.createFaceMaterial({ bgColor: '#f6d743' }),
+                    this.createFaceMaterial({ bgColor: '#f6d743' }), this.createFaceMaterial({ bgColor: '#f6d743' }),
+                    this.createFaceMaterial({ bgColor: '#f6d743', drawSmiley: true }), this.createFaceMaterial({ bgColor: '#f6d743' })
                 ];
             } else {
-                let color = '#f6d743'; // Yellow arms
-                if (name === 'Torso') color = '#0d69ac'; // Blue torso
-                if (name.includes('Leg')) color = '#a1c48c'; // Green legs
+                let color = '#f6d743'; 
+                if (name === 'Torso') color = '#0d69ac'; 
+                if (name.includes('Leg')) color = '#a1c48c'; 
                 mats = this.createFaceMaterial({ bgColor: color });
             }
 
@@ -513,80 +525,138 @@ class AnimationApp {
         this.populateHierarchy();
     }
 
-    // --- PLUGIN SYSTEM ---
+    // --- MAPS & BUILD PLUGIN: PROP SPAWNING ---
+
+    spawnProp(type, specificName = null) {
+        // Generate Unique Name
+        let finalName = specificName;
+        if (!finalName) {
+            let i = 1;
+            while (this.rig[`${type} ${i}`]) i++;
+            finalName = `${type} ${i}`;
+        }
+
+        const group = new THREE.Group();
+        // Give some variance to spawn position so they don't exactly overlap
+        const rx = (Math.random() - 0.5) * 4;
+        const rz = (Math.random() - 0.5) * 4;
+
+        if (type === 'Desk') {
+            group.position.set(rx, 1.5, -3 + rz); 
+            // Top
+            const topGeo = new THREE.BoxGeometry(3, 0.2, 1.5);
+            const topMat = new THREE.MeshStandardMaterial({ color: 0x8B5A2B, roughness: 0.8 });
+            const top = new THREE.Mesh(topGeo, topMat);
+            top.castShadow = true; top.receiveShadow = true;
+            top.userData = { isRigPart: true, name: finalName, parentGroup: group };
+            group.add(top);
+
+            // Legs
+            const legGeo = new THREE.BoxGeometry(0.2, 1.5, 0.2);
+            legGeo.translate(0, -0.75, 0); // pivot at top of leg
+            const legPositions = [ [-1.3, -0.1, -0.6], [1.3, -0.1, -0.6], [-1.3, -0.1, 0.6], [1.3, -0.1, 0.6] ];
+            legPositions.forEach(pos => {
+                const leg = new THREE.Mesh(legGeo, topMat);
+                leg.position.set(...pos);
+                leg.castShadow = true; leg.receiveShadow = true;
+                leg.userData = { isRigPart: true, name: finalName, parentGroup: group };
+                group.add(leg);
+            });
+        } 
+        else if (type === 'Bed') {
+            group.position.set(rx + 3, 0.2, -3 + rz); 
+            // Frame
+            const frameGeo = new THREE.BoxGeometry(2.2, 0.4, 4);
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0x5C4033, roughness: 0.9 });
+            const frame = new THREE.Mesh(frameGeo, frameMat);
+            frame.castShadow = true; frame.receiveShadow = true;
+            frame.userData = { isRigPart: true, name: finalName, parentGroup: group };
+            group.add(frame);
+
+            // Mattress
+            const matGeo = new THREE.BoxGeometry(2, 0.3, 3.8);
+            const matMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.5 });
+            const mattress = new THREE.Mesh(matGeo, matMat);
+            mattress.position.set(0, 0.35, 0);
+            mattress.castShadow = true; mattress.receiveShadow = true;
+            mattress.userData = { isRigPart: true, name: finalName, parentGroup: group };
+            group.add(mattress);
+
+            // Pillow
+            const pilGeo = new THREE.BoxGeometry(1.5, 0.2, 0.8);
+            const pilMat = new THREE.MeshStandardMaterial({ color: 0xE0E0E0, roughness: 0.6 });
+            const pillow = new THREE.Mesh(pilGeo, pilMat);
+            pillow.position.set(0, 0.6, -1.2);
+            pillow.castShadow = true; pillow.receiveShadow = true;
+            pillow.userData = { isRigPart: true, name: finalName, parentGroup: group };
+            group.add(pillow);
+        }
+
+        // Setup defaults for Smart Reset
+        group.userData.defaultPosition = group.position.clone();
+        group.userData.defaultRotation = group.rotation.clone();
+
+        this.scene.add(group);
+        this.rig[finalName] = group;
+        this.partsList.push(finalName);
+
+        if (!specificName) {
+            this.spawnedProps.push({ type: type, name: finalName });
+        }
+
+        // Close modal, notify, and refresh UI
+        document.getElementById('maps-build-modal').classList.add('hidden');
+        this.populateHierarchy();
+        this.renderKeyframesUI();
+        this.showToast(`Spawned ${finalName}! Select it to animate.`);
+        this.autoSave();
+    }
+
+
+    // --- LABELED PARTS PLUGIN ---
 
     toggleLabeledPartsPlugin() {
         const btn = document.getElementById('btn-plugin-labeled');
-        
         if (!this.plugins.labeledParts.installed) {
-            this.plugins.labeledParts.installed = true;
-            btn.innerText = "Uninstall";
+            this.plugins.labeledParts.installed = true; btn.innerText = "Uninstall";
             btn.className = "btn-secondary px-3 py-1.5 rounded text-xs font-bold bg-red-900/40 text-red-300 border border-red-800 hover:bg-red-900/60 transition-all";
-            this.applyLabeledParts();
-            this.showToast("Plugin Installed: Labeled Parts");
+            this.applyLabeledParts(); this.showToast("Plugin Installed: Labeled Parts");
         } else {
-            this.plugins.labeledParts.installed = false;
-            btn.innerText = "Install";
+            this.plugins.labeledParts.installed = false; btn.innerText = "Install";
             btn.className = "btn-secondary px-3 py-1.5 rounded text-xs font-bold transition-all border-green-700/50 hover:border-green-500";
-            this.removeLabeledParts();
-            this.showToast("Plugin Removed: Labeled Parts");
+            this.removeLabeledParts(); this.showToast("Plugin Removed: Labeled Parts");
         }
     }
 
     applyLabeledParts() {
-        Object.keys(this.rig).forEach(partName => {
-            if (partName === 'root') return;
-            const group = this.rig[partName];
-            const mesh = group.children[0];
-            
+        ['Torso', 'Head', 'Left Arm', 'Right Arm', 'Left Leg', 'Right Leg'].forEach(partName => {
+            if(!this.rig[partName]) return;
+            const group = this.rig[partName]; const mesh = group.children[0];
             if (mesh && mesh.isMesh) {
-                if (!mesh.userData.originalMaterial) {
-                    mesh.userData.originalMaterial = mesh.material;
-                }
-                
-                const isHead = partName === 'Head';
-                const isTorso = partName === 'Torso';
-                const bg = isHead ? '#A3A2A5' : '#8B0000'; // Gray for head, Dark Red for body
-                
+                if (!mesh.userData.originalMaterial) mesh.userData.originalMaterial = mesh.material;
+                const isHead = partName === 'Head'; const isTorso = partName === 'Torso';
+                const bg = isHead ? '#A3A2A5' : '#8B0000'; 
                 const mats = [
-                    this.createFaceMaterial({ bgColor: bg, text: 'R', drawBorders: true }), // Right (+X)
-                    this.createFaceMaterial({ bgColor: bg, text: 'L', drawBorders: true }), // Left (-X)
-                    this.createFaceMaterial({ bgColor: bg, text: 'T', drawBorders: true }), // Top (+Y)
-                    this.createFaceMaterial({ bgColor: bg, text: '', drawBorders: true }),  // Bottom (-Y)
-                    this.createFaceMaterial({ 
-                        bgColor: bg, 
-                        text: isHead ? '' : (isTorso ? 'FRONT' : 'F'), 
-                        drawSmiley: isHead, 
-                        drawBorders: true 
-                    }), // Front (+Z)
-                    this.createFaceMaterial({ 
-                        bgColor: bg, 
-                        text: isTorso ? 'BACK' : 'B', 
-                        drawBorders: true 
-                    }) // Back (-Z)
+                    this.createFaceMaterial({ bgColor: bg, text: 'R', drawBorders: true }), 
+                    this.createFaceMaterial({ bgColor: bg, text: 'L', drawBorders: true }), 
+                    this.createFaceMaterial({ bgColor: bg, text: 'T', drawBorders: true }), 
+                    this.createFaceMaterial({ bgColor: bg, text: '', drawBorders: true }),  
+                    this.createFaceMaterial({ bgColor: bg, text: isHead ? '' : (isTorso ? 'FRONT' : 'F'), drawSmiley: isHead, drawBorders: true }), 
+                    this.createFaceMaterial({ bgColor: bg, text: isTorso ? 'BACK' : 'B', drawBorders: true }) 
                 ];
-                
                 mesh.material = mats;
-
-                // Re-apply highlight if this part was currently selected
-                if (this.selectedObject === group) {
-                    this.setEmissiveHighlight(group, 0x222222);
-                }
+                if (this.selectedObject === group) this.setEmissiveHighlight(group, 0x222222);
             }
         });
     }
 
     removeLabeledParts() {
-        Object.keys(this.rig).forEach(partName => {
-            if (partName === 'root') return;
-            const group = this.rig[partName];
-            const mesh = group.children[0];
+        ['Torso', 'Head', 'Left Arm', 'Right Arm', 'Left Leg', 'Right Leg'].forEach(partName => {
+            if(!this.rig[partName]) return;
+            const group = this.rig[partName]; const mesh = group.children[0];
             if (mesh && mesh.isMesh && mesh.userData.originalMaterial) {
                 mesh.material = mesh.userData.originalMaterial;
-                
-                if (this.selectedObject === group) {
-                    this.setEmissiveHighlight(group, 0x222222);
-                }
+                if (this.selectedObject === group) this.setEmissiveHighlight(group, 0x222222);
             }
         });
     }
@@ -651,8 +721,18 @@ class AnimationApp {
         this.partsList.forEach(name => {
             if(!this.rig[name]) return;
             const div = document.createElement('div');
+            
+            // Highlight dynamic props slightly differently
+            const isProp = !['Torso', 'Head', 'Left Arm', 'Right Arm', 'Left Leg', 'Right Leg'].includes(name);
+            
             div.className = "px-2 py-1.5 rounded hover:bg-gray-700 cursor-pointer text-gray-400 text-sm flex items-center gap-2 transition-colors";
-            div.innerHTML = `<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg> ${name}`;
+            
+            let iconColor = isProp ? 'text-purple-400' : 'text-gray-500';
+            let iconPath = isProp 
+                ? 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' // Box icon
+                : 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'; // Cube icon
+                
+            div.innerHTML = `<svg class="w-4 h-4 ${iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}"></path></svg> ${name}`;
             div.onclick = () => this.selectPart(this.rig[name], name, div);
             list.appendChild(div);
         });
@@ -665,7 +745,7 @@ class AnimationApp {
             return;
         } 
         if (event.button === 0) { 
-            if(event.target.closest('.panel') && !event.target.closest('#canvas-container')) return;
+            if(event.target.closest('.panel') || event.target.closest('#maps-build-modal')) return;
             if (this.transformControl.axis !== null) return;
 
             this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -703,7 +783,7 @@ class AnimationApp {
             this.previousMousePosition = { x: event.clientX, y: event.clientY };
         } else {
             // Handle Tooltip Hover
-            if(event.target.closest('.panel') || this.transformControl.axis !== null) {
+            if(event.target.closest('.panel') || event.target.closest('#maps-build-modal') || this.transformControl.axis !== null) {
                 document.getElementById('part-tooltip').classList.add('hidden');
                 return;
             }
@@ -793,7 +873,8 @@ class AnimationApp {
         this.selectedObject = object3D;
         this.selectedDom = domElement;
 
-        this.setEmissiveHighlight(object3D, 0x222222);
+        // Slight emissive highlight so it shows clearly
+        this.setEmissiveHighlight(object3D, 0x333333);
 
         if(domElement) {
             domElement.classList.add('bg-blue-900', 'text-white');
@@ -968,8 +1049,10 @@ class AnimationApp {
         tracksContainer.innerHTML = '';
 
         this.partsList.forEach(partName => {
+            const isProp = !['Torso', 'Head', 'Left Arm', 'Right Arm', 'Left Leg', 'Right Leg'].includes(partName);
+            
             const label = document.createElement('div');
-            label.className = 'h-10 flex items-center px-3 text-[11px] font-bold text-gray-400 border-b border-gray-700 bg-gray-800/50 whitespace-nowrap overflow-hidden text-ellipsis';
+            label.className = `h-10 flex items-center px-3 text-[11px] font-bold ${isProp ? 'text-purple-300' : 'text-gray-400'} border-b border-gray-700 bg-gray-800/50 whitespace-nowrap overflow-hidden text-ellipsis`;
             label.innerText = partName;
             labelsContainer.appendChild(label);
             
@@ -981,6 +1064,12 @@ class AnimationApp {
                     const pct = (kf.frame / this.totalFrames) * 100;
                     const dot = document.createElement('div');
                     dot.className = 'keyframe-dot';
+                    
+                    if (isProp) {
+                        dot.style.background = '#a855f7'; // Purple dot for props
+                        dot.style.boxShadow = '0 0 4px rgba(168, 85, 247, 0.8)';
+                    }
+                    
                     if (this.selectedKeyframes.has(kf)) dot.classList.add('selected');
                     dot.style.left = `calc(${pct}%)`; 
                     
@@ -1085,10 +1174,19 @@ class AnimationApp {
     }
 
     applyFrame(frame) {
-        Object.keys(this.keyframes).forEach(name => {
-            const kfs = this.keyframes[name];
+        Object.keys(this.rig).forEach(name => {
+            if (name === 'root') return;
             const obj = this.rig[name];
-            if(!obj || kfs.length === 0) return;
+            if (!obj) return;
+
+            const kfs = this.keyframes[name];
+            if (!kfs || kfs.length === 0) {
+                if (obj.userData.defaultPosition && obj.userData.defaultRotation) {
+                    obj.position.copy(obj.userData.defaultPosition);
+                    obj.rotation.copy(obj.userData.defaultRotation);
+                }
+                return;
+            }
 
             let prev = kfs[0]; let next = kfs[kfs.length-1];
             for(let i=0; i<kfs.length; i++) {
@@ -1107,7 +1205,7 @@ class AnimationApp {
             }
         });
         
-        if (this.selectedObject && this.keyframes[document.getElementById('selected-part-name').innerText]) {
+        if (this.selectedObject) {
             this.updateUIValues();
             if(this.transformControl) this.transformControl.updateMatrixWorld();
         }
@@ -1173,30 +1271,23 @@ class AnimationApp {
 
     smoothSelectedKeyframes() {
         if (this.selectedKeyframes.size === 0) { this.showToast("Select keyframes first"); return; }
-        
         const groups = {};
         this.selectedKeyframes.forEach(kf => {
             if (!groups[kf._partName]) groups[kf._partName] = [];
             groups[kf._partName].push(kf);
         });
-        
-        let smoothedCount = 0;
-        const iterations = 3; 
+        let smoothedCount = 0; const iterations = 3; 
 
         Object.keys(groups).forEach(partName => {
             const track = this.keyframes[partName];
             groups[partName].sort((a,b) => a.frame - b.frame);
             
             for (let iter = 0; iter < iterations; iter++) {
-                const tempPos = new Map();
-                const tempRot = new Map();
-
+                const tempPos = new Map(); const tempRot = new Map();
                 groups[partName].forEach(kf => {
                     const idx = track.indexOf(kf);
                     if (idx > 0 && idx < track.length - 1) {
-                        const prev = track[idx - 1];
-                        const next = track[idx + 1];
-                        
+                        const prev = track[idx - 1]; const next = track[idx + 1];
                         const avgPos = new THREE.Vector3().addVectors(prev.position, next.position).multiplyScalar(0.5);
                         const newPos = new THREE.Vector3().copy(kf.position).lerp(avgPos, 0.5);
                         tempPos.set(kf, newPos);
@@ -1204,35 +1295,32 @@ class AnimationApp {
                         const qPrev = new THREE.Quaternion().setFromEuler(prev.rotation);
                         const qNext = new THREE.Quaternion().setFromEuler(next.rotation);
                         const qAvg = qPrev.clone().slerp(qNext, 0.5);
-                        
                         const qCurr = new THREE.Quaternion().setFromEuler(kf.rotation);
                         const newRot = qCurr.clone().slerp(qAvg, 0.5);
                         tempRot.set(kf, newRot);
-                        
                         smoothedCount++;
                     }
                 });
-
                 tempPos.forEach((pos, kf) => kf.position.copy(pos));
                 tempRot.forEach((rot, kf) => kf.rotation.setFromQuaternion(rot));
             }
         });
 
         if (smoothedCount > 0) {
-            this.applyFrame(this.currentFrame); 
-            this.updateUIValues();
-            this.showToast("Curves Smoothed Beautifully!"); 
-            this.autoSave();
-        } else { 
-            this.showToast("Requires selected inner keyframes"); 
-        }
+            this.applyFrame(this.currentFrame); this.updateUIValues();
+            this.showToast("Curves Smoothed Beautifully!"); this.autoSave();
+        } else { this.showToast("Requires selected inner keyframes"); }
     }
+
+    // --- SAVE AND LOAD ---
 
     serializeAnimation() {
         const animName = document.getElementById('anim-name').value || 'Animation';
         return JSON.stringify({ 
-            version: "1.5_R6", name: animName, totalFrames: this.totalFrames, 
-            fps: this.fps, currentFrame: this.currentFrame, tracks: this.keyframes 
+            version: "1.6.0_R6", name: animName, totalFrames: this.totalFrames, 
+            fps: this.fps, currentFrame: this.currentFrame, 
+            props: this.spawnedProps, // Save which props exist
+            tracks: this.keyframes 
         }, (key, value) => {
             if (value && value.isVector3) return {x:value.x, y:value.y, z:value.z};
             if (value && value.isEuler) return {x:value.x, y:value.y, z:value.z, order:value.order};
@@ -1242,9 +1330,18 @@ class AnimationApp {
     }
 
     loadAnimationData(parsed) {
-        if (!parsed.tracks) return;
+        if (!parsed.tracks) return;a
         if (parsed.name) document.getElementById('anim-name').value = parsed.name;
         
+        // Restore dynamic props before trying to load their keyframes!
+        if (parsed.props) {
+            parsed.props.forEach(p => {
+                if (!this.rig[p.name]) {
+                    this.spawnProp(p.type, p.name);
+                }
+            });
+        }
+
         const importedKeyframes = {};
         for (const [partName, track] of Object.entries(parsed.tracks)) {
             importedKeyframes[partName] = track.map(kf => ({
@@ -1277,7 +1374,7 @@ class AnimationApp {
 
     exportAnimation() {
         const name = document.getElementById('anim-name').value || 'r6_animation';
-        const safeName = name.replace(/[^a-z0-9_-]/gi, '_'); // Sanitize filename
+        const safeName = name.replace(/[^a-z0-9_-]/gi, '_'); 
         const url = URL.createObjectURL(new Blob([this.serializeAnimation()], {type: 'application/json'}));
         const a = document.createElement('a');
         a.href = url; a.download = `${safeName}.json`;
