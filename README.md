@@ -13,6 +13,6 @@ Animating in this, not-well made studio can be **tricky**, but it takes time.
   ### More Features Coming SOON!!
 
   ## Credits:
-  - Gemini - He fixed the ploblem in V1.2 [The camera was *glitchy* and won't go in the direction you wanted to.]
-  - EyesHD - Made the idea, and used Three.js including the rig, and the plugins.
-  - Johnny - Made the plugins, and ideas.
+  - |Helper| Gemini - He fixed the ploblem in V1.2 [The camera was *glitchy* and won't go in the direction you wanted to.]
+  - |Owner| EyesHD - Made the idea, and used Three.js including the rig, and the plugins.
+  - |Co-Owner| Johnny - Made the plugins, and ideas.
