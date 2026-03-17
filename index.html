@@ -22,7 +22,7 @@
             background: rgba(30, 30, 30, 0.95);
             border: 1px solid #3a3a3a;
             backdrop-filter: blur(5px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
             position: absolute;
         }
 
@@ -87,6 +87,8 @@
         }
         .action-toast.show { opacity: 1; }
         input[type=number], input[type=text] { user-select: text; }
+        
+        .drag-handle { cursor: move; }
     </style>
 </head>
 <body>
@@ -106,15 +108,25 @@
     <div class="absolute top-0 left-0 w-full h-14 panel flex items-center justify-between px-4 z-20 border-b border-gray-700" style="position: fixed;">
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/50">M</div>
-            <h1 class="text-gray-200 font-semibold tracking-wide flex items-center gap-2">Moon Animator <span class="text-xs text-blue-400 font-normal">v1.6.0</span></h1>
+            <h1 class="text-gray-200 font-semibold tracking-wide flex items-center gap-2">Moon Animator <span class="text-xs text-blue-400 font-normal">v1.6</span></h1>
             
             <div class="w-px h-6 bg-gray-600 mx-2"></div>
             <input type="text" id="anim-name" value="My_Animation" class="bg-gray-900 border border-gray-600 text-gray-300 text-sm px-2 py-1 rounded focus:border-blue-500 outline-none w-48" placeholder="Animation Name" title="Animation Name">
             
-            <span class="ml-2 px-2 py-0.5 bg-green-900/50 text-green-400 border border-green-800 rounded text-[10px] uppercase font-bold tracking-wider">Auto-Save ON</span>
+            <span class="ml-2 px-2 py-0.5 bg-green-900/50 text-green-400 border border-green-800 rounded text-[10px] uppercase font-bold tracking-wider shadow-sm">Auto-Save ON</span>
+            
+            <!-- Minimized Maps & Build Button -->
+            <button id="minimized-maps-btn" onclick="app.maximizeMapsBuild()" class="hidden ml-2 px-2.5 py-1 bg-indigo-900/60 text-indigo-300 border border-indigo-500/50 hover:border-indigo-400 rounded text-xs font-bold transition-all flex items-center gap-1.5 shadow-[0_0_8px_rgba(99,102,241,0.2)]">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                Maps & Build
+            </button>
         </div>
         
         <div class="flex items-center gap-2">
+            <button onclick="document.getElementById('update-log-modal').classList.remove('hidden')" class="btn-secondary px-3 py-1.5 rounded text-sm font-medium mr-4 flex items-center gap-2 text-blue-300 border-blue-800/50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Update Log
+            </button>
             <button onclick="app.smoothSelectedKeyframes()" class="btn-secondary px-3 py-1.5 rounded text-sm font-medium mr-2" title="Hotkey: M">Smooth (M)</button>
             <input type="file" id="import-file" class="hidden" accept=".json" onchange="app.handleImport(event)">
             <button onclick="document.getElementById('import-file').click()" class="btn-secondary px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2">Import</button>
@@ -128,16 +140,16 @@
         <div class="resizer resizer-b" data-resize="hierarchy" data-dir="b"></div>
         <div class="resizer resizer-br" data-resize="hierarchy" data-dir="br"></div>
         
-        <div class="p-3 border-b border-gray-700 font-semibold text-gray-300 text-sm cursor-move drag-handle" data-target="panel-hierarchy">Scene Hierarchy</div>
+        <div class="p-3 border-b border-gray-700 font-semibold text-gray-300 text-sm cursor-move drag-handle" data-target="panel-hierarchy">Workspace Hierarchy</div>
         <div id="hierarchy-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
         <div class="p-3 border-t border-gray-700 bg-gray-900/50 rounded-b-lg">
-            <div class="text-xs text-gray-500 mb-1">Selected Object</div>
+            <div class="text-xs text-gray-500 mb-1">Selected Part</div>
             <div id="selected-part-name" class="text-blue-400 font-mono text-sm">None</div>
         </div>
     </div>
 
     <!-- Right Sidebar (Properties, VFX & Plugins Tabs) -->
-    <div id="panel-properties" class="panel rounded-lg flex flex-col z-10 overflow-hidden" style="top: 4.5rem; right: 1rem; width: 320px; height: 450px;">
+    <div id="panel-properties" class="panel rounded-lg flex flex-col z-10 overflow-hidden" style="top: 4.5rem; right: 1rem; width: 320px; height: 420px;">
         <div class="resizer resizer-l" data-resize="properties" data-dir="l"></div>
         <div class="resizer resizer-b" data-resize="properties" data-dir="b"></div>
         <div class="resizer resizer-bl" data-resize="properties" data-dir="bl"></div>
@@ -194,32 +206,65 @@
         <div id="panel-plugins" class="hidden flex-1 flex flex-col p-4 bg-gray-900/50 overflow-y-auto space-y-3">
             <h3 class="font-bold text-gray-200 text-sm border-b border-gray-700 pb-2 mb-1">Available Plugins</h3>
             
-            <!-- Plugin: Maps & Build -->
-            <div class="bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-700/50 p-3 rounded-lg flex flex-col gap-3 shadow-md">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h4 class="text-purple-300 font-bold text-sm flex items-center gap-1.5">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                            Maps & Build
-                        </h4>
-                        <p class="text-[11px] text-gray-300 mt-1 leading-tight">Create and Animate!!! Spawn beds, desks, and more, then animate them reacting to your rig!</p>
-                    </div>
-                    <button onclick="document.getElementById('maps-build-modal').classList.remove('hidden')" class="btn-primary px-3 py-1.5 rounded text-xs font-bold transition-all shadow-lg shadow-purple-900/50">Open</button>
-                </div>
-            </div>
-
             <!-- Plugin: Labeled Parts -->
-            <div class="bg-gray-800 border border-gray-700 p-3 rounded-lg flex flex-col gap-3 shadow-md mt-2">
+            <div class="bg-gray-800 border border-gray-700 p-3 rounded-lg flex flex-col gap-3 shadow-md">
                 <div class="flex justify-between items-start">
                     <div>
                         <h4 class="text-green-400 font-bold text-sm flex items-center gap-1.5">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
                             Labeled Parts
                         </h4>
-                        <p class="text-[11px] text-gray-400 mt-1 leading-tight">Labels your Parts with letters and colors. Mapped beautifully to all 6 faces of every part.</p>
+                        <p class="text-[11px] text-gray-400 mt-1 leading-tight">Labels your Parts with letters and colors. Mapped beautifully to all 6 faces.</p>
                     </div>
                     <button id="btn-plugin-labeled" onclick="app.toggleLabeledPartsPlugin()" class="btn-secondary px-3 py-1.5 rounded text-xs font-bold transition-all border-green-700/50 hover:border-green-500">Install</button>
                 </div>
+            </div>
+
+            <!-- Plugin: Maps & Build -->
+            <div class="bg-gray-800 border border-gray-700 p-3 rounded-lg flex flex-col gap-3 shadow-md">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="text-indigo-400 font-bold text-sm flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            Maps & Build
+                        </h4>
+                        <p class="text-[11px] text-gray-400 mt-1 leading-tight">Create and Animate!!! Spawn beds, desks, and other props to animate scenes.</p>
+                    </div>
+                    <button id="btn-plugin-maps" onclick="app.toggleMapsBuildPlugin()" class="btn-secondary px-3 py-1.5 rounded text-xs font-bold transition-all border-indigo-700/50 hover:border-indigo-500">Install</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating UI: Maps & Build -->
+    <div id="maps-build-window" class="panel rounded-xl flex flex-col z-40 hidden shadow-[0_10px_30px_rgba(79,70,229,0.2)] border border-indigo-500/40" style="top: 100px; left: 300px; width: 340px; height: 380px;">
+        <div class="p-3 border-b border-gray-700 bg-gradient-to-r from-indigo-900/60 to-purple-900/60 flex justify-between items-center cursor-move drag-handle rounded-t-xl" data-target="maps-build-window">
+            <span class="font-bold text-indigo-300 text-sm flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                Maps & Build
+            </span>
+            <div class="flex gap-1">
+                <button onclick="app.minimizeMapsBuild()" class="w-6 h-6 flex items-center justify-center hover:bg-indigo-500/40 rounded text-indigo-200 transition-colors" title="Minimize">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M20 12H4"></path></svg>
+                </button>
+            </div>
+        </div>
+        <div class="p-4 flex-1 overflow-y-auto bg-gray-900/80 rounded-b-xl">
+            <p class="text-xs text-indigo-200/70 mb-4 text-center">Click an item to spawn it into your workspace. It will appear in your hierarchy, ready to animate!</p>
+            <div class="grid grid-cols-2 gap-4">
+                
+                <!-- Prop: Desk -->
+                <div onclick="app.spawnProp('Desk')" class="bg-gray-800 border border-gray-600 rounded-lg p-3 cursor-pointer hover:border-indigo-400 hover:bg-gray-700 transition-all text-center shadow-md group">
+                    <div class="h-20 bg-gray-900 rounded mb-2 flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🪑</div>
+                    <span class="text-sm font-bold text-gray-200 group-hover:text-indigo-300">Desk</span>
+                </div>
+                
+                <!-- Prop: Bed -->
+                <div onclick="app.spawnProp('Bed')" class="bg-gray-800 border border-gray-600 rounded-lg p-3 cursor-pointer hover:border-indigo-400 hover:bg-gray-700 transition-all text-center shadow-md group">
+                    <div class="h-20 bg-gray-900 rounded mb-2 flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🛏️</div>
+                    <span class="text-sm font-bold text-gray-200 group-hover:text-indigo-300">Bed</span>
+                </div>
+                
             </div>
         </div>
     </div>
@@ -265,66 +310,37 @@
         </div>
     </div>
 
-    <!-- Maps & Build Plugin Modal -->
-    <div id="maps-build-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div class="bg-gray-900/95 border border-purple-500/50 w-[700px] h-[500px] rounded-2xl shadow-[0_0_40px_rgba(168,85,247,0.3)] flex flex-col overflow-hidden transform transition-all">
-            
-            <!-- Modal Header -->
-            <div class="h-16 bg-gradient-to-r from-purple-900/80 to-blue-900/80 flex items-center justify-between px-6 border-b border-gray-700 shadow-md">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center shadow-lg border border-purple-400/50">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                    </div>
-                    <div>
-                        <h2 class="text-white font-bold text-xl tracking-wide">Maps & Build <span class="text-[10px] align-top bg-gradient-to-r from-pink-500 to-purple-500 text-white px-1.5 py-0.5 rounded-full uppercase ml-1">Pro</span></h2>
-                        <p class="text-xs text-purple-200 opacity-80">Click an item to spawn it into your scene!</p>
-                    </div>
+    <!-- Update Log Modal -->
+    <div id="update-log-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm hidden">
+        <div class="panel w-[32rem] rounded-xl p-6 shadow-2xl border border-gray-600">
+            <h2 class="text-2xl font-bold text-white mb-4 flex items-center gap-3 border-b border-gray-700 pb-3">
+                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                Update Log
+            </h2>
+            <div class="space-y-5 max-h-80 overflow-y-auto text-sm pr-2 pb-2">
+                <div>
+                    <h3 class="text-indigo-400 font-bold text-base flex items-center gap-2">🛠️ v1.6 - Maps & Build Plugin!</h3>
+                    <ul class="list-disc pl-5 mt-2 space-y-1.5 text-gray-200">
+                        <li><span class="text-white font-semibold">New Plugin: Maps & Build.</span> You can now spawn props like Beds and Desks directly into your scene!</li>
+                        <li><span class="text-white font-semibold">Animate Everything:</span> Props act exactly like Rig limbs. You can click a desk, press 'R' to move it, and keyframe it getting kicked away!</li>
+                        <li><span class="text-white font-semibold">Draggable Floating UI:</span> A slick new floating window to manage your props. Minimize it to snap it to your top toolbar for quick access.</li>
+                    </ul>
                 </div>
-                <button onclick="document.getElementById('maps-build-modal').classList.add('hidden')" class="text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 p-2 rounded-full transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
+                <div>
+                    <h3 class="text-blue-400 font-bold text-base">v1.5.1 - Smart Deletions</h3>
+                    <ul class="list-disc pl-5 mt-2 space-y-1.5 text-gray-200">
+                        <li>If you delete the last remaining keyframe for a part, it cleanly reverts to its original spawned position.</li>
+                    </ul>
+                </div>
             </div>
-
-            <!-- Modal Content (Grid) -->
-            <div class="flex-1 p-6 overflow-y-auto bg-gray-900/80 grid grid-cols-2 md:grid-cols-3 gap-6">
-                
-                <!-- Item: Desk -->
-                <div onclick="app.spawnProp('Desk')" class="bg-gray-800 border border-gray-700 hover:border-purple-500 hover:bg-gray-750 transition-all rounded-xl p-4 flex flex-col items-center cursor-pointer group shadow-lg hover:shadow-purple-900/40 hover:-translate-y-1">
-                    <div class="w-full h-32 bg-gradient-to-b from-gray-700 to-gray-900 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden border border-gray-600/50">
-                        <span class="text-6xl filter drop-shadow-lg transform group-hover:scale-110 transition-transform">🪑</span>
-                        <div class="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    </div>
-                    <h3 class="text-white font-bold w-full text-center">Wooden Desk</h3>
-                    <p class="text-[11px] text-gray-400 w-full text-center mt-1">A classic solid desk. Perfect for kicking!</p>
-                </div>
-
-                <!-- Item: Bed -->
-                <div onclick="app.spawnProp('Bed')" class="bg-gray-800 border border-gray-700 hover:border-purple-500 hover:bg-gray-750 transition-all rounded-xl p-4 flex flex-col items-center cursor-pointer group shadow-lg hover:shadow-purple-900/40 hover:-translate-y-1">
-                    <div class="w-full h-32 bg-gradient-to-b from-gray-700 to-gray-900 rounded-lg mb-4 flex items-center justify-center relative overflow-hidden border border-gray-600/50">
-                        <span class="text-6xl filter drop-shadow-lg transform group-hover:scale-110 transition-transform">🛏️</span>
-                        <div class="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    </div>
-                    <h3 class="text-white font-bold w-full text-center">Cozy Bed</h3>
-                    <p class="text-[11px] text-gray-400 w-full text-center mt-1">Complete with mattress and pillow.</p>
-                </div>
-
-                <!-- Coming Soon Placeholder -->
-                <div class="bg-gray-800/50 border border-gray-700/50 border-dashed rounded-xl p-4 flex flex-col items-center justify-center opacity-60">
-                    <span class="text-4xl mb-2 text-gray-500">🧱</span>
-                    <h3 class="text-gray-400 font-bold text-center">More Builds</h3>
-                    <p class="text-[11px] text-gray-500 text-center mt-1">Coming in next update</p>
-                </div>
-
-            </div>
+            <button onclick="document.getElementById('update-log-modal').classList.add('hidden')" class="mt-6 w-full btn-primary py-2.5 rounded font-bold uppercase tracking-wide">Awesome!</button>
         </div>
     </div>
 
-
 <script>
 /**
- * MOON ANIMATOR WEB STUDIO - v1.6.0
- * Added Maps & Build dynamic prop spawning system! Props are fully integrated into 
- * the timeline, hierarchy, raycasting, selection, and auto-save systems!
+ * MOON ANIMATOR WEB STUDIO - v1.6
+ * Added "Maps & Build" plugin with custom Floating UI, Draggable Windows, and Animatable Scene Props!
  */
 
 class AnimationApp {
@@ -334,12 +350,8 @@ class AnimationApp {
         this.camera = null;
         this.renderer = null;
         this.transformControl = null;
-        
-        // Scene Data Structure
         this.rig = {}; 
         this.partsList = ['Torso', 'Head', 'Left Arm', 'Right Arm', 'Left Leg', 'Right Leg'];
-        this.spawnedProps = []; // Keeps track of spawned dynamic props for saving/loading
-
         this.selectedObject = null;
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
@@ -347,7 +359,10 @@ class AnimationApp {
         this.textureCache = {}; 
         
         // Plugin States
-        this.plugins = { labeledParts: { installed: false } };
+        this.plugins = {
+            labeledParts: { installed: false },
+            mapsAndBuild: { installed: false, minimized: false }
+        };
 
         // Animation State
         this.isPlaying = false;
@@ -377,24 +392,30 @@ class AnimationApp {
     init() {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x202025);
-        this.scene.fog = new THREE.Fog(0x202025, 10, 50);
+        this.scene.fog = new THREE.FogExp2(0x202025, 0.02);
 
         this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, 5, 8);
+        this.camera.position.set(0, 5, 10);
         this.camera.lookAt(0, 2, 0);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.container.appendChild(this.renderer.domElement);
 
         this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(5, 10, 7);
+        dirLight.position.set(10, 15, 10);
         dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
         this.scene.add(dirLight);
 
-        this.scene.add(new THREE.GridHelper(50, 50, 0x444444, 0x2a2a2a));
+        // Floor Grid
+        const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x2a2a2a);
+        gridHelper.position.y = -0.01; // slightly below 0
+        this.scene.add(gridHelper);
 
         this.transformControl = new THREE.TransformControls(this.camera, this.renderer.domElement);
         this.transformControl.setMode('rotate'); 
@@ -425,6 +446,7 @@ class AnimationApp {
 
         this.setupTimelineInteractions();
         this.setupPanelResizers();
+        this.setupDraggablePanels();
         this.renderKeyframesUI();
         this.animate();
     }
@@ -436,34 +458,33 @@ class AnimationApp {
         if (!opts.drawSmiley && !opts.drawBorders && !opts.text) {
             return new THREE.MeshStandardMaterial({ color: new THREE.Color(opts.bgColor), roughness: 0.6 });
         }
+
         let tex = this.textureCache[key];
         if (!tex) {
             const canvas = document.createElement('canvas');
             canvas.width = 256; canvas.height = 256;
             const ctx = canvas.getContext('2d');
             
-            ctx.fillStyle = opts.bgColor || '#ffffff';
-            ctx.fillRect(0, 0, 256, 256);
+            ctx.fillStyle = opts.bgColor || '#ffffff'; ctx.fillRect(0, 0, 256, 256);
             
             if (opts.drawBorders) {
-                ctx.lineWidth = 12; ctx.strokeStyle = '#00FF00';
-                ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(6, 256); ctx.stroke();
+                ctx.lineWidth = 12;
+                ctx.strokeStyle = '#00FF00'; ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(6, 256); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(250, 0); ctx.lineTo(250, 256); ctx.stroke();
-                ctx.strokeStyle = '#0088FF';
-                ctx.beginPath(); ctx.moveTo(0, 6); ctx.lineTo(256, 6); ctx.stroke();
+                ctx.strokeStyle = '#0088FF'; ctx.beginPath(); ctx.moveTo(0, 6); ctx.lineTo(256, 6); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(0, 250); ctx.lineTo(256, 250); ctx.stroke();
             }
             if (opts.drawSmiley) {
                 ctx.fillStyle = '#000000'; ctx.fillRect(80, 80, 20, 40); ctx.fillRect(156, 80, 20, 40);
-                ctx.beginPath(); ctx.arc(128, 140, 40, 0, Math.PI, false);
-                ctx.lineWidth = 12; ctx.strokeStyle = '#000000'; ctx.stroke();
+                ctx.beginPath(); ctx.arc(128, 140, 40, 0, Math.PI, false); ctx.lineWidth = 12; ctx.strokeStyle = '#000000'; ctx.stroke();
             }
             if (opts.text) {
-                ctx.fillStyle = '#E5E4E2'; ctx.font = 'bold 80px "Segoe UI", Arial, sans-serif';
-                if (opts.text === 'FRONT' || opts.text === 'BACK') ctx.font = 'bold 45px "Segoe UI", Arial, sans-serif'; 
+                ctx.fillStyle = '#E5E4E2';
+                ctx.font = (opts.text === 'FRONT' || opts.text === 'BACK') ? 'bold 45px "Segoe UI"' : 'bold 80px "Segoe UI"';
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(opts.text, 128, 128);
             }
-            tex = new THREE.CanvasTexture(canvas); tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+            tex = new THREE.CanvasTexture(canvas);
+            tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
             this.textureCache[key] = tex;
         }
         return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, color: 0xffffff });
@@ -487,29 +508,20 @@ class AnimationApp {
         const createPart = (name, w, h, d, parent, px, py, pz, pivotOffset) => {
             const group = new THREE.Group();
             group.position.set(px, py, pz);
-            group.userData.defaultPosition = group.position.clone();
-            group.userData.defaultRotation = group.rotation.clone();
+            group.userData = { isRigPart: true, name: name, parentGroup: group, defaultPosition: group.position.clone(), defaultRotation: group.rotation.clone() };
 
             const geo = new THREE.RoundedBoxGeometry(w, h, d, 4, 0.08);
             geo.translate(0, pivotOffset, 0); 
             
-            let mats;
+            let mats = this.createFaceMaterial({ bgColor: (name === 'Torso') ? '#0d69ac' : (name.includes('Leg') ? '#a1c48c' : '#f6d743') });
             if (name === 'Head') {
-                mats = [
-                    this.createFaceMaterial({ bgColor: '#f6d743' }), this.createFaceMaterial({ bgColor: '#f6d743' }),
-                    this.createFaceMaterial({ bgColor: '#f6d743' }), this.createFaceMaterial({ bgColor: '#f6d743' }),
-                    this.createFaceMaterial({ bgColor: '#f6d743', drawSmiley: true }), this.createFaceMaterial({ bgColor: '#f6d743' })
-                ];
-            } else {
-                let color = '#f6d743'; 
-                if (name === 'Torso') color = '#0d69ac'; 
-                if (name.includes('Leg')) color = '#a1c48c'; 
-                mats = this.createFaceMaterial({ bgColor: color });
+                mats = [];
+                for(let i=0; i<6; i++) mats.push(this.createFaceMaterial({ bgColor: '#f6d743', drawSmiley: (i===4) }));
             }
 
             const mesh = new THREE.Mesh(geo, mats);
             mesh.castShadow = true; mesh.receiveShadow = true;
-            mesh.userData = { isRigPart: true, name: name, parentGroup: group };
+            mesh.userData = group.userData; // link mesh to group properties
             group.add(mesh); parent.add(group);
             this.rig[name] = group;
             return group;
@@ -525,118 +537,36 @@ class AnimationApp {
         this.populateHierarchy();
     }
 
-    // --- MAPS & BUILD PLUGIN: PROP SPAWNING ---
-
-    spawnProp(type, specificName = null) {
-        // Generate Unique Name
-        let finalName = specificName;
-        if (!finalName) {
-            let i = 1;
-            while (this.rig[`${type} ${i}`]) i++;
-            finalName = `${type} ${i}`;
-        }
-
-        const group = new THREE.Group();
-        // Give some variance to spawn position so they don't exactly overlap
-        const rx = (Math.random() - 0.5) * 4;
-        const rz = (Math.random() - 0.5) * 4;
-
-        if (type === 'Desk') {
-            group.position.set(rx, 1.5, -3 + rz); 
-            // Top
-            const topGeo = new THREE.BoxGeometry(3, 0.2, 1.5);
-            const topMat = new THREE.MeshStandardMaterial({ color: 0x8B5A2B, roughness: 0.8 });
-            const top = new THREE.Mesh(topGeo, topMat);
-            top.castShadow = true; top.receiveShadow = true;
-            top.userData = { isRigPart: true, name: finalName, parentGroup: group };
-            group.add(top);
-
-            // Legs
-            const legGeo = new THREE.BoxGeometry(0.2, 1.5, 0.2);
-            legGeo.translate(0, -0.75, 0); // pivot at top of leg
-            const legPositions = [ [-1.3, -0.1, -0.6], [1.3, -0.1, -0.6], [-1.3, -0.1, 0.6], [1.3, -0.1, 0.6] ];
-            legPositions.forEach(pos => {
-                const leg = new THREE.Mesh(legGeo, topMat);
-                leg.position.set(...pos);
-                leg.castShadow = true; leg.receiveShadow = true;
-                leg.userData = { isRigPart: true, name: finalName, parentGroup: group };
-                group.add(leg);
-            });
-        } 
-        else if (type === 'Bed') {
-            group.position.set(rx + 3, 0.2, -3 + rz); 
-            // Frame
-            const frameGeo = new THREE.BoxGeometry(2.2, 0.4, 4);
-            const frameMat = new THREE.MeshStandardMaterial({ color: 0x5C4033, roughness: 0.9 });
-            const frame = new THREE.Mesh(frameGeo, frameMat);
-            frame.castShadow = true; frame.receiveShadow = true;
-            frame.userData = { isRigPart: true, name: finalName, parentGroup: group };
-            group.add(frame);
-
-            // Mattress
-            const matGeo = new THREE.BoxGeometry(2, 0.3, 3.8);
-            const matMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.5 });
-            const mattress = new THREE.Mesh(matGeo, matMat);
-            mattress.position.set(0, 0.35, 0);
-            mattress.castShadow = true; mattress.receiveShadow = true;
-            mattress.userData = { isRigPart: true, name: finalName, parentGroup: group };
-            group.add(mattress);
-
-            // Pillow
-            const pilGeo = new THREE.BoxGeometry(1.5, 0.2, 0.8);
-            const pilMat = new THREE.MeshStandardMaterial({ color: 0xE0E0E0, roughness: 0.6 });
-            const pillow = new THREE.Mesh(pilGeo, pilMat);
-            pillow.position.set(0, 0.6, -1.2);
-            pillow.castShadow = true; pillow.receiveShadow = true;
-            pillow.userData = { isRigPart: true, name: finalName, parentGroup: group };
-            group.add(pillow);
-        }
-
-        // Setup defaults for Smart Reset
-        group.userData.defaultPosition = group.position.clone();
-        group.userData.defaultRotation = group.rotation.clone();
-
-        this.scene.add(group);
-        this.rig[finalName] = group;
-        this.partsList.push(finalName);
-
-        if (!specificName) {
-            this.spawnedProps.push({ type: type, name: finalName });
-        }
-
-        // Close modal, notify, and refresh UI
-        document.getElementById('maps-build-modal').classList.add('hidden');
-        this.populateHierarchy();
-        this.renderKeyframesUI();
-        this.showToast(`Spawned ${finalName}! Select it to animate.`);
-        this.autoSave();
-    }
-
-
-    // --- LABELED PARTS PLUGIN ---
+    // --- PLUGIN SYSTEM ---
 
     toggleLabeledPartsPlugin() {
         const btn = document.getElementById('btn-plugin-labeled');
         if (!this.plugins.labeledParts.installed) {
-            this.plugins.labeledParts.installed = true; btn.innerText = "Uninstall";
+            this.plugins.labeledParts.installed = true;
+            btn.innerText = "Uninstall";
             btn.className = "btn-secondary px-3 py-1.5 rounded text-xs font-bold bg-red-900/40 text-red-300 border border-red-800 hover:bg-red-900/60 transition-all";
-            this.applyLabeledParts(); this.showToast("Plugin Installed: Labeled Parts");
+            this.applyLabeledParts();
+            this.showToast("Plugin Installed: Labeled Parts");
         } else {
-            this.plugins.labeledParts.installed = false; btn.innerText = "Install";
+            this.plugins.labeledParts.installed = false;
+            btn.innerText = "Install";
             btn.className = "btn-secondary px-3 py-1.5 rounded text-xs font-bold transition-all border-green-700/50 hover:border-green-500";
-            this.removeLabeledParts(); this.showToast("Plugin Removed: Labeled Parts");
+            this.removeLabeledParts();
+            this.showToast("Plugin Removed: Labeled Parts");
         }
     }
 
     applyLabeledParts() {
-        ['Torso', 'Head', 'Left Arm', 'Right Arm', 'Left Leg', 'Right Leg'].forEach(partName => {
-            if(!this.rig[partName]) return;
-            const group = this.rig[partName]; const mesh = group.children[0];
-            if (mesh && mesh.isMesh) {
+        Object.keys(this.rig).forEach(partName => {
+            if (partName === 'root' || this.rig[partName].userData.isProp) return; // Don't label props
+            const group = this.rig[partName];
+            const mesh = group.children.find(c => c.isMesh);
+            if (mesh) {
                 if (!mesh.userData.originalMaterial) mesh.userData.originalMaterial = mesh.material;
                 const isHead = partName === 'Head'; const isTorso = partName === 'Torso';
                 const bg = isHead ? '#A3A2A5' : '#8B0000'; 
-                const mats = [
+                
+                mesh.material = [
                     this.createFaceMaterial({ bgColor: bg, text: 'R', drawBorders: true }), 
                     this.createFaceMaterial({ bgColor: bg, text: 'L', drawBorders: true }), 
                     this.createFaceMaterial({ bgColor: bg, text: 'T', drawBorders: true }), 
@@ -644,25 +574,182 @@ class AnimationApp {
                     this.createFaceMaterial({ bgColor: bg, text: isHead ? '' : (isTorso ? 'FRONT' : 'F'), drawSmiley: isHead, drawBorders: true }), 
                     this.createFaceMaterial({ bgColor: bg, text: isTorso ? 'BACK' : 'B', drawBorders: true }) 
                 ];
-                mesh.material = mats;
                 if (this.selectedObject === group) this.setEmissiveHighlight(group, 0x222222);
             }
         });
     }
 
     removeLabeledParts() {
-        ['Torso', 'Head', 'Left Arm', 'Right Arm', 'Left Leg', 'Right Leg'].forEach(partName => {
-            if(!this.rig[partName]) return;
-            const group = this.rig[partName]; const mesh = group.children[0];
-            if (mesh && mesh.isMesh && mesh.userData.originalMaterial) {
+        Object.keys(this.rig).forEach(partName => {
+            if (partName === 'root' || this.rig[partName].userData.isProp) return;
+            const group = this.rig[partName];
+            const mesh = group.children.find(c => c.isMesh);
+            if (mesh && mesh.userData.originalMaterial) {
                 mesh.material = mesh.userData.originalMaterial;
                 if (this.selectedObject === group) this.setEmissiveHighlight(group, 0x222222);
             }
         });
     }
 
+    // MAPS & BUILD PLUGIN LOGIC
+    toggleMapsBuildPlugin() {
+        const btn = document.getElementById('btn-plugin-maps');
+        const ui = document.getElementById('maps-build-window');
+        
+        if (!this.plugins.mapsAndBuild.installed) {
+            this.plugins.mapsAndBuild.installed = true;
+            btn.innerText = "Uninstall";
+            btn.className = "btn-secondary px-3 py-1.5 rounded text-xs font-bold bg-red-900/40 text-red-300 border border-red-800 hover:bg-red-900/60 transition-all";
+            
+            // Show UI
+            this.plugins.mapsAndBuild.minimized = false;
+            ui.classList.remove('hidden');
+            document.getElementById('minimized-maps-btn').classList.add('hidden');
+            
+            this.showToast("Plugin Installed: Maps & Build");
+        } else {
+            this.plugins.mapsAndBuild.installed = false;
+            btn.innerText = "Install";
+            btn.className = "btn-secondary px-3 py-1.5 rounded text-xs font-bold transition-all border-indigo-700/50 hover:border-indigo-500";
+            
+            // Hide UI entirely
+            ui.classList.add('hidden');
+            document.getElementById('minimized-maps-btn').classList.add('hidden');
+            
+            this.showToast("Plugin Removed: Maps & Build");
+        }
+    }
+
+    minimizeMapsBuildUI() {
+        document.getElementById('maps-build-window').classList.add('hidden');
+        document.getElementById('minimized-maps-btn').classList.remove('hidden');
+        this.plugins.mapsAndBuild.minimized = true;
+    }
+
+    maximizeMapsBuild() {
+        document.getElementById('maps-build-window').classList.remove('hidden');
+        document.getElementById('minimized-maps-btn').classList.add('hidden');
+        this.plugins.mapsAndBuild.minimized = false;
+    }
+
+    // PROP GENERATORS
+    createDeskMesh() {
+        const group = new THREE.Group();
+        const mat = new THREE.MeshStandardMaterial({color: 0x8b5a2b, roughness: 0.8});
+        
+        const top = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 2), mat);
+        top.position.y = 1.5; group.add(top);
+        
+        const legGeo = new THREE.BoxGeometry(0.2, 1.5, 0.2);
+        const l1 = new THREE.Mesh(legGeo, mat); l1.position.set(-1.3, 0.75, -0.8); group.add(l1);
+        const l2 = new THREE.Mesh(legGeo, mat); l2.position.set(1.3, 0.75, -0.8); group.add(l2);
+        const l3 = new THREE.Mesh(legGeo, mat); l3.position.set(-1.3, 0.75, 0.8); group.add(l3);
+        const l4 = new THREE.Mesh(legGeo, mat); l4.position.set(1.3, 0.75, 0.8); group.add(l4);
+        return group;
+    }
+
+    createBedMesh() {
+        const group = new THREE.Group();
+        const frameMat = new THREE.MeshStandardMaterial({color: 0x5c4033, roughness: 0.9});
+        const mattressMat = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 1});
+        const pillowMat = new THREE.MeshStandardMaterial({color: 0xe0e0e0});
+        
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 4.4), frameMat);
+        frame.position.y = 0.25; group.add(frame);
+        
+        const mattress = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 4.2), mattressMat);
+        mattress.position.y = 0.7; group.add(mattress);
+        
+        const pillow = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.25, 0.8), pillowMat);
+        pillow.position.set(0, 1.0, -1.4); group.add(pillow);
+        
+        return group;
+    }
+
+    spawnProp(type, explicitName = null) {
+        let uniqueName = explicitName;
+        if (!uniqueName) {
+            let count = 1;
+            uniqueName = type;
+            while(this.partsList.includes(uniqueName)) {
+                count++;
+                uniqueName = `${type} ${count}`;
+            }
+        }
+        
+        let group;
+        if(type === 'Desk') group = this.createDeskMesh();
+        else if(type === 'Bed') group = this.createBedMesh();
+        else return; // unknown
+        
+        group.position.set(3, 0, -3); // Spawn slightly to the side
+        
+        // Critical: Set userData so raycaster catches it and it can be animated
+        group.userData = { 
+            isRigPart: true, 
+            isProp: true,
+            propType: type,
+            name: uniqueName, 
+            parentGroup: group, 
+            defaultPosition: group.position.clone(), 
+            defaultRotation: group.rotation.clone() 
+        };
+        
+        group.traverse(child => {
+            if(child.isMesh) {
+                child.userData = group.userData;
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+
+        this.scene.add(group);
+        this.rig[uniqueName] = group;
+        this.partsList.push(uniqueName);
+        
+        this.populateHierarchy();
+        this.renderKeyframesUI();
+        this.showToast(`Spawned ${uniqueName}!`);
+        this.autoSave();
+    }
+
 
     // --- CORE LOGIC ---
+
+    setupDraggablePanels() {
+        document.querySelectorAll('.drag-handle').forEach(handle => {
+            handle.addEventListener('mousedown', (e) => {
+                if(e.target.tagName === 'BUTTON' || e.target.closest('button')) return; 
+                e.preventDefault();
+                
+                const targetId = handle.getAttribute('data-target');
+                const panel = document.getElementById(targetId);
+                if(!panel) return;
+                
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const initialLeft = panel.offsetLeft;
+                const initialTop = panel.offsetTop;
+
+                const onMove = (ev) => {
+                    const dx = ev.clientX - startX;
+                    const dy = ev.clientY - startY;
+                    panel.style.left = `${initialLeft + dx}px`;
+                    panel.style.top = `${initialTop + dy}px`;
+                    panel.style.right = 'auto'; // Break free from right/bottom snapping
+                    panel.style.bottom = 'auto';
+                };
+                
+                const onUp = () => {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                };
+                
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        });
+    }
 
     setupPanelResizers() {
         document.querySelectorAll('.resizer').forEach(resizer => {
@@ -721,18 +808,16 @@ class AnimationApp {
         this.partsList.forEach(name => {
             if(!this.rig[name]) return;
             const div = document.createElement('div');
-            
-            // Highlight dynamic props slightly differently
-            const isProp = !['Torso', 'Head', 'Left Arm', 'Right Arm', 'Left Leg', 'Right Leg'].includes(name);
+            const isProp = this.rig[name].userData.isProp;
             
             div.className = "px-2 py-1.5 rounded hover:bg-gray-700 cursor-pointer text-gray-400 text-sm flex items-center gap-2 transition-colors";
             
-            let iconColor = isProp ? 'text-purple-400' : 'text-gray-500';
-            let iconPath = isProp 
-                ? 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' // Box icon
-                : 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'; // Cube icon
-                
-            div.innerHTML = `<svg class="w-4 h-4 ${iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}"></path></svg> ${name}`;
+            // Icon depending on prop
+            let iconSvg = `<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>`;
+            if (isProp && name.includes('Desk')) iconSvg = `<span class="w-4 h-4 flex items-center justify-center text-xs">🪑</span>`;
+            if (isProp && name.includes('Bed')) iconSvg = `<span class="w-4 h-4 flex items-center justify-center text-xs">🛏️</span>`;
+            
+            div.innerHTML = `${iconSvg} <span class="${isProp ? 'text-indigo-300' : ''}">${name}</span>`;
             div.onclick = () => this.selectPart(this.rig[name], name, div);
             list.appendChild(div);
         });
@@ -745,7 +830,7 @@ class AnimationApp {
             return;
         } 
         if (event.button === 0) { 
-            if(event.target.closest('.panel') || event.target.closest('#maps-build-modal')) return;
+            if(event.target.closest('.panel') && !event.target.closest('#canvas-container')) return;
             if (this.transformControl.axis !== null) return;
 
             this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -762,7 +847,7 @@ class AnimationApp {
             if (found) {
                 const name = found.userData.name;
                 const uiEls = document.getElementById('hierarchy-list').children;
-                let uiEl = Array.from(uiEls).find(el => el.innerText.trim() === name);
+                let uiEl = Array.from(uiEls).find(el => el.innerText.includes(name));
                 this.selectPart(found.userData.parentGroup, name, uiEl);
             } else {
                 this.deselect();
@@ -782,8 +867,7 @@ class AnimationApp {
             this.camera.lookAt(0, 2, 0); 
             this.previousMousePosition = { x: event.clientX, y: event.clientY };
         } else {
-            // Handle Tooltip Hover
-            if(event.target.closest('.panel') || event.target.closest('#maps-build-modal') || this.transformControl.axis !== null) {
+            if(event.target.closest('.panel') || this.transformControl.axis !== null) {
                 document.getElementById('part-tooltip').classList.add('hidden');
                 return;
             }
@@ -873,8 +957,7 @@ class AnimationApp {
         this.selectedObject = object3D;
         this.selectedDom = domElement;
 
-        // Slight emissive highlight so it shows clearly
-        this.setEmissiveHighlight(object3D, 0x333333);
+        this.setEmissiveHighlight(object3D, 0x222222);
 
         if(domElement) {
             domElement.classList.add('bg-blue-900', 'text-white');
@@ -1049,10 +1132,10 @@ class AnimationApp {
         tracksContainer.innerHTML = '';
 
         this.partsList.forEach(partName => {
-            const isProp = !['Torso', 'Head', 'Left Arm', 'Right Arm', 'Left Leg', 'Right Leg'].includes(partName);
-            
             const label = document.createElement('div');
-            label.className = `h-10 flex items-center px-3 text-[11px] font-bold ${isProp ? 'text-purple-300' : 'text-gray-400'} border-b border-gray-700 bg-gray-800/50 whitespace-nowrap overflow-hidden text-ellipsis`;
+            
+            const isProp = this.rig[partName]?.userData?.isProp;
+            label.className = `h-10 flex items-center px-3 text-[11px] font-bold border-b border-gray-700 bg-gray-800/50 whitespace-nowrap overflow-hidden text-ellipsis ${isProp ? 'text-indigo-400' : 'text-gray-400'}`;
             label.innerText = partName;
             labelsContainer.appendChild(label);
             
@@ -1064,12 +1147,6 @@ class AnimationApp {
                     const pct = (kf.frame / this.totalFrames) * 100;
                     const dot = document.createElement('div');
                     dot.className = 'keyframe-dot';
-                    
-                    if (isProp) {
-                        dot.style.background = '#a855f7'; // Purple dot for props
-                        dot.style.boxShadow = '0 0 4px rgba(168, 85, 247, 0.8)';
-                    }
-                    
                     if (this.selectedKeyframes.has(kf)) dot.classList.add('selected');
                     dot.style.left = `calc(${pct}%)`; 
                     
@@ -1180,6 +1257,8 @@ class AnimationApp {
             if (!obj) return;
 
             const kfs = this.keyframes[name];
+            
+            // Smart Reset: Revert to default spawn if no keyframes
             if (!kfs || kfs.length === 0) {
                 if (obj.userData.defaultPosition && obj.userData.defaultRotation) {
                     obj.position.copy(obj.userData.defaultPosition);
@@ -1271,23 +1350,30 @@ class AnimationApp {
 
     smoothSelectedKeyframes() {
         if (this.selectedKeyframes.size === 0) { this.showToast("Select keyframes first"); return; }
+        
         const groups = {};
         this.selectedKeyframes.forEach(kf => {
             if (!groups[kf._partName]) groups[kf._partName] = [];
             groups[kf._partName].push(kf);
         });
-        let smoothedCount = 0; const iterations = 3; 
+        
+        let smoothedCount = 0;
+        const iterations = 3; 
 
         Object.keys(groups).forEach(partName => {
             const track = this.keyframes[partName];
             groups[partName].sort((a,b) => a.frame - b.frame);
             
             for (let iter = 0; iter < iterations; iter++) {
-                const tempPos = new Map(); const tempRot = new Map();
+                const tempPos = new Map();
+                const tempRot = new Map();
+
                 groups[partName].forEach(kf => {
                     const idx = track.indexOf(kf);
                     if (idx > 0 && idx < track.length - 1) {
-                        const prev = track[idx - 1]; const next = track[idx + 1];
+                        const prev = track[idx - 1];
+                        const next = track[idx + 1];
+                        
                         const avgPos = new THREE.Vector3().addVectors(prev.position, next.position).multiplyScalar(0.5);
                         const newPos = new THREE.Vector3().copy(kf.position).lerp(avgPos, 0.5);
                         tempPos.set(kf, newPos);
@@ -1295,32 +1381,45 @@ class AnimationApp {
                         const qPrev = new THREE.Quaternion().setFromEuler(prev.rotation);
                         const qNext = new THREE.Quaternion().setFromEuler(next.rotation);
                         const qAvg = qPrev.clone().slerp(qNext, 0.5);
+                        
                         const qCurr = new THREE.Quaternion().setFromEuler(kf.rotation);
                         const newRot = qCurr.clone().slerp(qAvg, 0.5);
                         tempRot.set(kf, newRot);
+                        
                         smoothedCount++;
                     }
                 });
+
                 tempPos.forEach((pos, kf) => kf.position.copy(pos));
                 tempRot.forEach((rot, kf) => kf.rotation.setFromQuaternion(rot));
             }
         });
 
         if (smoothedCount > 0) {
-            this.applyFrame(this.currentFrame); this.updateUIValues();
-            this.showToast("Curves Smoothed Beautifully!"); this.autoSave();
-        } else { this.showToast("Requires selected inner keyframes"); }
+            this.applyFrame(this.currentFrame); 
+            this.updateUIValues();
+            this.showToast("Curves Smoothed Beautifully!"); 
+            this.autoSave();
+        } else { 
+            this.showToast("Requires selected inner keyframes"); 
+        }
     }
-
-    // --- SAVE AND LOAD ---
 
     serializeAnimation() {
         const animName = document.getElementById('anim-name').value || 'Animation';
+        
+        // Save the metadata about props so we can recreate them on load!
+        const propsData = {};
+        Object.keys(this.rig).forEach(k => {
+            if(this.rig[k].userData.isProp) {
+                propsData[k] = this.rig[k].userData.propType;
+            }
+        });
+
         return JSON.stringify({ 
-            version: "1.6.0_R6", name: animName, totalFrames: this.totalFrames, 
-            fps: this.fps, currentFrame: this.currentFrame, 
-            props: this.spawnedProps, // Save which props exist
-            tracks: this.keyframes 
+            version: "1.6", name: animName, totalFrames: this.totalFrames, 
+            fps: this.fps, currentFrame: this.currentFrame, tracks: this.keyframes,
+            props: propsData 
         }, (key, value) => {
             if (value && value.isVector3) return {x:value.x, y:value.y, z:value.z};
             if (value && value.isEuler) return {x:value.x, y:value.y, z:value.z, order:value.order};
@@ -1330,20 +1429,26 @@ class AnimationApp {
     }
 
     loadAnimationData(parsed) {
-        if (!parsed.tracks) return;a
+        if (!parsed.tracks) return;
         if (parsed.name) document.getElementById('anim-name').value = parsed.name;
         
-        // Restore dynamic props before trying to load their keyframes!
+        // Dynamically spawn missing props from the save file!
         if (parsed.props) {
-            parsed.props.forEach(p => {
-                if (!this.rig[p.name]) {
-                    this.spawnProp(p.type, p.name);
+            Object.keys(parsed.props).forEach(propName => {
+                if (!this.partsList.includes(propName)) {
+                    this.spawnProp(parsed.props[propName], propName);
                 }
             });
         }
-
+        
         const importedKeyframes = {};
         for (const [partName, track] of Object.entries(parsed.tracks)) {
+            // Also serve as a fallback if `props` metadata wasn't found but a track exists
+            if (!this.partsList.includes(partName)) {
+                if (partName.includes('Desk')) this.spawnProp('Desk', partName);
+                else if (partName.includes('Bed')) this.spawnProp('Bed', partName);
+            }
+
             importedKeyframes[partName] = track.map(kf => ({
                 frame: kf.frame, _partName: partName,
                 position: new THREE.Vector3(kf.position.x, kf.position.y, kf.position.z),
