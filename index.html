@@ -11,7 +11,7 @@
     <style>
         body { margin: 0; overflow: hidden; background-color: #1a1a1a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
         #canvas-container { width: 100vw; height: 100vh; display: block; }
-        
+
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #2d2d2d; }
@@ -35,7 +35,7 @@
         }
         .btn-primary:hover { filter: brightness(1.1); }
         .btn-primary:active { transform: translateY(1px); }
-        
+
         .btn-secondary {
             background: #4b5563;
             border: 1px solid #374151;
@@ -44,6 +44,15 @@
             cursor: pointer;
         }
         .btn-secondary:hover { background: #6b7280; }
+
+        .btn-danger {
+            background: #dc2626;
+            border: 1px solid #991b1b;
+            color: white;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-danger:hover { background: #ef4444; }
 
         /* Panel Resizers */
         .resizer { position: absolute; z-index: 50; transition: background 0.2s; }
@@ -87,9 +96,56 @@
         }
         .action-toast.show { opacity: 1; }
         input[type=number], input[type=text] { user-select: text; }
-        
+
         .drag-handle { cursor: move; }
+
+        /* Multi-selection styling */
+        .hierarchy-item { transition: all 0.15s ease; }
+        .hierarchy-item.selected {
+            background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
+            color: white !important;
+            border-left: 3px solid #60a5fa;
+        }
+        .hierarchy-item.multi-selected {
+            background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
+            color: white !important;
+            border-left: 3px solid #c4b5fd;
+        }
+
+        /* Smoothing options panel */
+        .smoothing-panel {
+            background: rgba(40, 40, 50, 0.98);
+            border: 1px solid #4a4a5a;
+            border-radius: 8px;
+            padding: 12px;
+            position: absolute;
+            z-index: 100;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+        }
+
+        .undo-redo-btn {
+            background: #374151;
+            border: 1px solid #4b5563;
+            color: #d1d5db;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .undo-redo-btn:hover:not(:disabled) {
+            background: #4b5563;
+            color: white;
+        }
+        .undo-redo-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
     </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -102,35 +158,82 @@
         <div class="font-bold text-blue-400 mb-1 border-b border-gray-700 pb-1" id="tooltip-part-name">Part Name</div>
         <div class="mt-1"><span class="text-yellow-400 font-bold">R</span> - Toggle Move/Rotate</div>
         <div><span class="text-yellow-400 font-bold">G</span> - World / Part Space</div>
+        <div><span class="text-yellow-400 font-bold">Ctrl+Click</span> - Multi-select</div>
     </div>
 
     <!-- Header / Toolbar -->
     <div class="absolute top-0 left-0 w-full h-14 panel flex items-center justify-between px-4 z-20 border-b border-gray-700" style="position: fixed;">
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/50">M</div>
-            <h1 class="text-gray-200 font-semibold tracking-wide flex items-center gap-2">Moon Animator <span class="text-xs text-blue-400 font-normal">v1.6</span></h1>
-            
+            <h1 class="text-gray-200 font-semibold tracking-wide flex items-center gap-2">Moon Animator <span class="text-xs text-blue-400 font-normal">v2.0</span></h1>
+
             <div class="w-px h-6 bg-gray-600 mx-2"></div>
             <input type="text" id="anim-name" value="My_Animation" class="bg-gray-900 border border-gray-600 text-gray-300 text-sm px-2 py-1 rounded focus:border-blue-500 outline-none w-48" placeholder="Animation Name" title="Animation Name">
-            
+
             <span class="ml-2 px-2 py-0.5 bg-green-900/50 text-green-400 border border-green-800 rounded text-[10px] uppercase font-bold tracking-wider shadow-sm">Auto-Save ON</span>
-            
+
+            <!-- Undo/Redo Buttons -->
+            <div class="flex gap-1 ml-2">
+                <button id="undo-btn" onclick="app.undo()" class="undo-redo-btn" disabled title="Ctrl+Z">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                    Undo
+                </button>
+                <button id="redo-btn" onclick="app.redo()" class="undo-redo-btn" disabled title="Ctrl+Y">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"></path></svg>
+                    Redo
+                </button>
+            </div>
+
             <!-- Minimized Maps & Build Button -->
             <button id="minimized-maps-btn" onclick="app.maximizeMapsBuild()" class="hidden ml-2 px-2.5 py-1 bg-indigo-900/60 text-indigo-300 border border-indigo-500/50 hover:border-indigo-400 rounded text-xs font-bold transition-all flex items-center gap-1.5 shadow-[0_0_8px_rgba(99,102,241,0.2)]">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                 Maps & Build
             </button>
         </div>
-        
+
         <div class="flex items-center gap-2">
             <button onclick="document.getElementById('update-log-modal').classList.remove('hidden')" class="btn-secondary px-3 py-1.5 rounded text-sm font-medium mr-4 flex items-center gap-2 text-blue-300 border-blue-800/50">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 Update Log
             </button>
-            <button onclick="app.smoothSelectedKeyframes()" class="btn-secondary px-3 py-1.5 rounded text-sm font-medium mr-2" title="Hotkey: M">Smooth (M)</button>
+            <button onclick="app.showSmoothingOptions()" class="btn-secondary px-3 py-1.5 rounded text-sm font-medium mr-2" title="Advanced Smoothing">Smooth+</button>
             <input type="file" id="import-file" class="hidden" accept=".json" onchange="app.handleImport(event)">
             <button onclick="document.getElementById('import-file').click()" class="btn-secondary px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2">Import</button>
             <button onclick="app.exportAnimation()" class="btn-primary px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2">Export</button>
+        </div>
+    </div>
+
+    <!-- Smoothing Options Popup -->
+    <div id="smoothing-popup" class="smoothing-panel hidden" style="top: 60px; right: 200px;">
+        <h4 class="text-white font-bold text-sm mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            Advanced Smoothing
+        </h4>
+        <div class="space-y-3">
+            <div>
+                <label class="text-xs text-gray-400 block mb-1">Smoothing Type</label>
+                <select id="smooth-type" class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white">
+                    <option value="average">Moving Average</option>
+                    <option value="gaussian">Gaussian Blur</option>
+                    <option value="bezier">Bezier Easing</option>
+                    <option value="spline">Catmull-Rom Spline</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-400 block mb-1">Intensity (1-10)</label>
+                <input type="range" id="smooth-intensity" min="1" max="10" value="5" class="w-full accent-purple-500">
+                <div class="flex justify-between text-[10px] text-gray-500 mt-0.5">
+                    <span>Subtle</span><span>Strong</span>
+                </div>
+            </div>
+            <div>
+                <label class="text-xs text-gray-400 block mb-1">Iterations</label>
+                <input type="number" id="smooth-iterations" value="3" min="1" max="10" class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white">
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="app.applyAdvancedSmoothing()" class="flex-1 btn-primary py-1.5 rounded text-xs font-bold">Apply</button>
+                <button onclick="document.getElementById('smoothing-popup').classList.add('hidden')" class="flex-1 btn-secondary py-1.5 rounded text-xs font-bold">Cancel</button>
+            </div>
         </div>
     </div>
 
@@ -139,11 +242,11 @@
         <div class="resizer resizer-r" data-resize="hierarchy" data-dir="r"></div>
         <div class="resizer resizer-b" data-resize="hierarchy" data-dir="b"></div>
         <div class="resizer resizer-br" data-resize="hierarchy" data-dir="br"></div>
-        
+
         <div class="p-3 border-b border-gray-700 font-semibold text-gray-300 text-sm cursor-move drag-handle" data-target="panel-hierarchy">Workspace Hierarchy</div>
         <div id="hierarchy-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
         <div class="p-3 border-t border-gray-700 bg-gray-900/50 rounded-b-lg">
-            <div class="text-xs text-gray-500 mb-1">Selected Part</div>
+            <div class="text-xs text-gray-500 mb-1">Selected Parts (<span id="selected-count">0</span>)</div>
             <div id="selected-part-name" class="text-blue-400 font-mono text-sm">None</div>
         </div>
     </div>
@@ -205,8 +308,7 @@
         <!-- Plugins Panel -->
         <div id="panel-plugins" class="hidden flex-1 flex flex-col p-4 bg-gray-900/50 overflow-y-auto space-y-3">
             <h3 class="font-bold text-gray-200 text-sm border-b border-gray-700 pb-2 mb-1">Available Plugins</h3>
-            
-            <!-- Plugin: Labeled Parts -->
+
             <div class="bg-gray-800 border border-gray-700 p-3 rounded-lg flex flex-col gap-3 shadow-md">
                 <div class="flex justify-between items-start">
                     <div>
@@ -220,7 +322,6 @@
                 </div>
             </div>
 
-            <!-- Plugin: Maps & Build -->
             <div class="bg-gray-800 border border-gray-700 p-3 rounded-lg flex flex-col gap-3 shadow-md">
                 <div class="flex justify-between items-start">
                     <div>
@@ -231,7 +332,7 @@
                         <p class="text-[11px] text-gray-400 mt-1 leading-tight">Create and Animate!!! Spawn beds, desks, and other props to animate scenes.</p>
                     </div>
                     <button id="btn-plugin-maps" onclick="app.toggleMapsBuildPlugin()" class="btn-secondary px-3 py-1.5 rounded text-xs font-bold transition-all border-indigo-700/50 hover:border-indigo-500">Install</button>
-                </div>
+                    </div>
             </div>
         </div>
     </div>
@@ -247,24 +348,25 @@
                 <button onclick="app.minimizeMapsBuild()" class="w-6 h-6 flex items-center justify-center hover:bg-indigo-500/40 rounded text-indigo-200 transition-colors" title="Minimize">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M20 12H4"></path></svg>
                 </button>
+                <button onclick="app.closeMapsBuild()" class="w-6 h-6 flex items-center justify-center hover:bg-red-500/40 rounded text-red-200 transition-colors" title="Close">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
         </div>
         <div class="p-4 flex-1 overflow-y-auto bg-gray-900/80 rounded-b-xl">
             <p class="text-xs text-indigo-200/70 mb-4 text-center">Click an item to spawn it into your workspace. It will appear in your hierarchy, ready to animate!</p>
             <div class="grid grid-cols-2 gap-4">
-                
-                <!-- Prop: Desk -->
+
                 <div onclick="app.spawnProp('Desk')" class="bg-gray-800 border border-gray-600 rounded-lg p-3 cursor-pointer hover:border-indigo-400 hover:bg-gray-700 transition-all text-center shadow-md group">
                     <div class="h-20 bg-gray-900 rounded mb-2 flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🪑</div>
                     <span class="text-sm font-bold text-gray-200 group-hover:text-indigo-300">Desk</span>
                 </div>
-                
-                <!-- Prop: Bed -->
+
                 <div onclick="app.spawnProp('Bed')" class="bg-gray-800 border border-gray-600 rounded-lg p-3 cursor-pointer hover:border-indigo-400 hover:bg-gray-700 transition-all text-center shadow-md group">
                     <div class="h-20 bg-gray-900 rounded mb-2 flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">🛏️</div>
                     <span class="text-sm font-bold text-gray-200 group-hover:text-indigo-300">Bed</span>
                 </div>
-                
+
             </div>
         </div>
     </div>
@@ -272,13 +374,13 @@
     <!-- Bottom Timeline -->
     <div id="panel-timeline" class="panel rounded-lg flex flex-col z-10" style="bottom: 1rem; left: 1rem; right: 1rem; height: 260px;">
         <div class="resizer resizer-t" data-resize="timeline" data-dir="t"></div>
-        
+
         <div class="h-12 border-b border-gray-700 flex items-center px-4 gap-4 bg-gray-900/50 rounded-t-lg cursor-move drag-handle" data-target="panel-timeline">
             <button onclick="app.togglePlay()" id="play-btn" class="text-gray-300 hover:text-white transition-colors">
                 <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
             <div class="text-gray-300 font-mono text-sm bg-gray-800 px-3 py-1 rounded border border-gray-700 shadow-inner" id="time-display">00:00 / 05:00</div>
-            
+
             <div class="h-5 w-px bg-gray-600 mx-2"></div>
             <button onclick="app.copyKeyframes()" class="text-xs text-gray-400 hover:text-white flex items-center gap-1 bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded transition-colors">Copy</button>
             <button onclick="app.pasteKeyframes()" class="text-xs text-gray-400 hover:text-white flex items-center gap-1 bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded transition-colors">Paste</button>
@@ -286,13 +388,13 @@
             <div class="flex-1"></div>
             <div class="text-xs text-gray-500 font-mono bg-gray-800 px-2 py-1 rounded border border-gray-700">FPS: 60</div>
         </div>
-        
+
         <div class="flex-1 flex overflow-hidden relative select-none">
             <div id="track-labels" class="w-32 bg-gray-800/90 border-r border-gray-700 overflow-y-hidden z-20 shadow-[2px_0_5px_rgba(0,0,0,0.2)]">
                 <div class="h-7 bg-gray-900 border-b border-gray-700 text-[10px] text-gray-500 px-2 py-1.5 font-bold uppercase tracking-wider">Parts</div>
                 <div id="labels-container" class="relative"></div>
             </div>
-            
+
             <div id="timeline-tracks-container" class="flex-1 relative overflow-y-auto overflow-x-hidden bg-gray-900/80 cursor-crosshair">
                 <div id="timeline-ruler" class="sticky top-0 left-0 w-full h-7 bg-gray-900 border-b border-gray-700 z-10 cursor-ew-resize">
                     <div class="absolute top-0 left-0 w-full h-full flex justify-between px-2 text-[10px] text-gray-500 font-mono items-center pointer-events-none">
@@ -319,7 +421,17 @@
             </h2>
             <div class="space-y-5 max-h-80 overflow-y-auto text-sm pr-2 pb-2">
                 <div>
-                    <h3 class="text-indigo-400 font-bold text-base flex items-center gap-2">🛠️ v1.6 - Maps & Build Plugin!</h3>
+                    <h3 class="text-indigo-400 font-bold text-base flex items-center gap-2">🚀 v2.0 - Major Update!</h3>
+                    <ul class="list-disc pl-5 mt-2 space-y-1.5 text-gray-200">
+                        <li><span class="text-white font-semibold">Multi-Selection:</span> Hold Ctrl and click multiple parts to select them all at once!</li>
+                        <li><span class="text-white font-semibold">Roblox Studio Gizmos:</span> Selection arrows now look exactly like Roblox Studio with colored axes.</li>
+                        <li><span class="text-white font-semibold">Advanced Smoothing:</span> New smoothing types: Moving Average, Gaussian Blur, Bezier Easing, and Catmull-Rom Spline.</li>
+                        <li><span class="text-white font-semibold">Undo/Redo System:</span> Full undo/redo support with Ctrl+Z and Ctrl+Y shortcuts.</li>
+                        <li><span class="text-white font-semibold">Maps & Build Fixed:</span> Plugin now works reliably with proper close/minimize functionality.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-blue-400 font-bold text-base">v1.6 - Maps & Build Plugin!</h3>
                     <ul class="list-disc pl-5 mt-2 space-y-1.5 text-gray-200">
                         <li><span class="text-white font-semibold">New Plugin: Maps & Build.</span> You can now spawn props like Beds and Desks directly into your scene!</li>
                         <li><span class="text-white font-semibold">Animate Everything:</span> Props act exactly like Rig limbs. You can click a desk, press 'R' to move it, and keyframe it getting kicked away!</li>
@@ -338,9 +450,10 @@
     </div>
 
 <script>
+
 /**
- * MOON ANIMATOR WEB STUDIO - v1.6
- * Added "Maps & Build" plugin with custom Floating UI, Draggable Windows, and Animatable Scene Props!
+ * MOON ANIMATOR WEB STUDIO - v2.0
+ * Features: Multi-selection, Roblox Studio Gizmos, Advanced Smoothing, Undo/Redo, Fixed Maps & Build
  */
 
 class AnimationApp {
@@ -352,12 +465,17 @@ class AnimationApp {
         this.transformControl = null;
         this.rig = {}; 
         this.partsList = ['Torso', 'Head', 'Left Arm', 'Right Arm', 'Left Leg', 'Right Leg'];
-        this.selectedObject = null;
+
+        // Multi-selection support
+        this.selectedObjects = new Set();
+        this.selectedObject = null; // Primary selected (for transform)
+        this.selectedDomElements = new Map();
+
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
-        
+
         this.textureCache = {}; 
-        
+
         // Plugin States
         this.plugins = {
             labeledParts: { installed: false },
@@ -371,20 +489,26 @@ class AnimationApp {
         this.fps = 60;
         this.lastTime = 0;
         this.keyframes = {}; 
-        
+
         // Selection & Tooltip
         this.selectedKeyframes = new Set();
         this.clipboard = [];
         this.isMarquee = false;
         this.marqueeStart = { x: 0, y: 0 };
         this.preMarqueeSelection = new Set();
-        
+
         // Camera State
         this.keys = { w: false, a: false, s: false, d: false, q: false, e: false };
         this.isRightMouseDown = false;
         this.previousMousePosition = { x: 0, y: 0 };
         this.cameraSpeed = 0.2;
         this.orbitSpeed = 0.005;
+
+        // Undo/Redo System
+        this.undoStack = [];
+        this.redoStack = [];
+        this.maxUndoSteps = 50;
+        this.isUndoing = false;
 
         this.init();
     }
@@ -414,23 +538,27 @@ class AnimationApp {
 
         // Floor Grid
         const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x2a2a2a);
-        gridHelper.position.y = -0.01; // slightly below 0
+        gridHelper.position.y = -0.01;
         this.scene.add(gridHelper);
 
+        // Setup TransformControls
         this.transformControl = new THREE.TransformControls(this.camera, this.renderer.domElement);
         this.transformControl.setMode('rotate'); 
-        this.transformControl.setSpace('world'); 
-        
+        this.transformControl.setSpace('world');
+
         this.transformControl.addEventListener('change', () => this.updateUIValues());
         this.transformControl.addEventListener('dragging-changed', (e) => {
             if (e.value) this.isRightMouseDown = false;
             else this.autoSave();
         });
-        
+
         this.transformControl.addEventListener('objectChange', () => {
             if (!this.isPlaying) { this.updateUIValues(); this.keyframeCurrent(true); }
         });
         this.scene.add(this.transformControl);
+
+        // Style TransformControls to look like Roblox Studio
+        setTimeout(() => this.styleTransformControlsLikeRoblox(), 500);
 
         this.buildR6Rig();
         this.loadAutoSave();
@@ -438,7 +566,7 @@ class AnimationApp {
         window.addEventListener('resize', () => this.onWindowResize(), false);
         document.addEventListener('keydown', (e) => this.onKeyDown(e), false);
         document.addEventListener('keyup', (e) => this.onKeyUp(e), false);
-        
+
         this.renderer.domElement.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
         this.renderer.domElement.addEventListener('mouseup', (e) => this.onMouseUp(e), false);
         this.renderer.domElement.addEventListener('mousemove', (e) => this.onMouseMove(e), false);
@@ -449,6 +577,192 @@ class AnimationApp {
         this.setupDraggablePanels();
         this.renderKeyframesUI();
         this.animate();
+    }
+
+    // --- ROBLox STUDIO STYLE GIZMO ---
+    // Styles the built-in TransformControls to look like Roblox Studio
+    styleTransformControlsLikeRoblox() {
+        // Roblox Studio uses: Red=X, Green=Y, Blue=Z with bright colors
+        // We override the gizmo materials and hide plane controls
+        const applyStyle = () => {
+            if (!this.transformControl || !this.transformControl.gizmo) {
+                setTimeout(applyStyle, 100);
+                return;
+            }
+
+            const gizmo = this.transformControl.gizmo;
+
+            // Helper function to style a gizmo component
+            const styleGizmo = (gizmoObj) => {
+                if (!gizmoObj) return;
+                gizmoObj.traverse(child => {
+                    if (child.isMesh || child.isLine) {
+                        // Hide plane controls (XY, YZ, XZ, XYZ) - Roblox only shows axis arrows
+                        if (child.name && (child.name.includes('XY') || child.name.includes('YZ') || 
+                            child.name.includes('XZ') || child.name === 'XYZ' || child.name === 'E')) {
+                            child.visible = false;
+                            return;
+                        }
+
+                        // Style axis elements
+                        if (child.name) {
+                            if (child.name.includes('X') && !child.name.includes('Y') && !child.name.includes('Z')) {
+                                if (child.material && child.material.color) {
+                                    child.material.color.setHex(0xff3333); // Bright Red
+                                    child.material.opacity = child.material.opacity || 0.85;
+                                }
+                            } else if (child.name.includes('Y') && !child.name.includes('X') && !child.name.includes('Z')) {
+                                if (child.material && child.material.color) {
+                                    child.material.color.setHex(0x33ff33); // Bright Green
+                                    child.material.opacity = child.material.opacity || 0.85;
+                                }
+                            } else if (child.name.includes('Z') && !child.name.includes('X') && !child.name.includes('Y')) {
+                                if (child.material && child.material.color) {
+                                    child.material.color.setHex(0x3333ff); // Bright Blue
+                                    child.material.opacity = child.material.opacity || 0.85;
+                                }
+                            }
+                        }
+
+                        // Ensure gizmo renders on top
+                        if (child.material) {
+                            child.material.depthTest = false;
+                            child.renderOrder = 1000;
+                        }
+                    }
+                });
+            };
+
+            // Style all gizmo modes
+            styleGizmo(gizmo.translate);
+            styleGizmo(gizmo.rotate);
+            styleGizmo(gizmo.scale);
+        };
+
+        // Apply with delay to ensure gizmo is fully initialized
+        setTimeout(applyStyle, 100);
+        setTimeout(applyStyle, 500);
+    }
+
+    updateRobloxGizmo() {
+        // No longer needed - built-in gizmo is styled directly
+        // This method is kept for compatibility but does nothing
+    }
+
+    // --- UNDO/REDO SYSTEM ---
+    pushUndoState(action = 'general') {
+        if (this.isUndoing) return;
+
+        const state = {
+            action: action,
+            keyframes: JSON.parse(JSON.stringify(this.keyframes, (key, value) => {
+                if (value && value.x !== undefined && value.y !== undefined && value.z !== undefined) {
+                    return { x: value.x, y: value.y, z: value.z, order: value.order };
+                }
+                return value;
+            })),
+            selectedObjects: Array.from(this.selectedObjects).map(obj => obj.userData.name),
+            currentFrame: this.currentFrame,
+            timestamp: Date.now()
+        };
+
+        this.undoStack.push(state);
+        if (this.undoStack.length > this.maxUndoSteps) {
+            this.undoStack.shift();
+        }
+
+        this.redoStack = [];
+        this.updateUndoRedoButtons();
+    }
+
+    undo() {
+        if (this.undoStack.length === 0) return;
+
+        this.isUndoing = true;
+
+        const currentState = {
+            action: 'undo',
+            keyframes: JSON.parse(JSON.stringify(this.keyframes, (key, value) => {
+                if (value && value.x !== undefined && value.y !== undefined && value.z !== undefined) {
+                    return { x: value.x, y: value.y, z: value.z, order: value.order };
+                }
+                return value;
+            })),
+            selectedObjects: Array.from(this.selectedObjects).map(obj => obj.userData.name),
+            currentFrame: this.currentFrame,
+            timestamp: Date.now()
+        };
+        this.redoStack.push(currentState);
+
+        const prevState = this.undoStack.pop();
+        this.restoreState(prevState);
+
+        this.isUndoing = false;
+        this.updateUndoRedoButtons();
+        this.showToast('Undo: ' + prevState.action);
+    }
+
+    redo() {
+        if (this.redoStack.length === 0) return;
+
+        this.isUndoing = true;
+
+        const currentState = {
+            action: 'redo',
+            keyframes: JSON.parse(JSON.stringify(this.keyframes, (key, value) => {
+                if (value && value.x !== undefined && value.y !== undefined && value.z !== undefined) {
+                    return { x: value.x, y: value.y, z: value.z, order: value.order };
+                }
+                return value;
+            })),
+            selectedObjects: Array.from(this.selectedObjects).map(obj => obj.userData.name),
+            currentFrame: this.currentFrame,
+            timestamp: Date.now()
+        };
+        this.undoStack.push(currentState);
+
+        const nextState = this.redoStack.pop();
+        this.restoreState(nextState);
+
+        this.isUndoing = false;
+        this.updateUndoRedoButtons();
+        this.showToast('Redo: ' + nextState.action);
+    }
+
+    restoreState(state) {
+        this.keyframes = {};
+        for (const [partName, track] of Object.entries(state.keyframes)) {
+            this.keyframes[partName] = track.map(kf => ({
+                frame: kf.frame,
+                _partName: partName,
+                position: new THREE.Vector3(kf.position.x, kf.position.y, kf.position.z),
+                rotation: new THREE.Euler(kf.rotation.x, kf.rotation.y, kf.rotation.z, kf.rotation.order || 'XYZ')
+            }));
+        }
+
+        this.deselectAll();
+        state.selectedObjects.forEach(name => {
+            if (this.rig[name]) {
+                this.selectPart(this.rig[name], name, null, false);
+            }
+        });
+
+        this.currentFrame = state.currentFrame;
+        this.updateScrubber();
+        this.applyFrame(this.currentFrame);
+        this.renderKeyframesUI();
+        this.autoSave();
+    }
+
+    updateUndoRedoButtons() {
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+
+        undoBtn.disabled = this.undoStack.length === 0;
+        redoBtn.disabled = this.redoStack.length === 0;
+
+        undoBtn.style.opacity = undoBtn.disabled ? '0.4' : '1';
+        redoBtn.style.opacity = redoBtn.disabled ? '0.4' : '1';
     }
 
     // --- MATERIAL & TEXTURE GENERATION SYSTEM ---
@@ -464,9 +778,9 @@ class AnimationApp {
             const canvas = document.createElement('canvas');
             canvas.width = 256; canvas.height = 256;
             const ctx = canvas.getContext('2d');
-            
+
             ctx.fillStyle = opts.bgColor || '#ffffff'; ctx.fillRect(0, 0, 256, 256);
-            
+
             if (opts.drawBorders) {
                 ctx.lineWidth = 12;
                 ctx.strokeStyle = '#00FF00'; ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(6, 256); ctx.stroke();
@@ -512,7 +826,7 @@ class AnimationApp {
 
             const geo = new THREE.RoundedBoxGeometry(w, h, d, 4, 0.08);
             geo.translate(0, pivotOffset, 0); 
-            
+
             let mats = this.createFaceMaterial({ bgColor: (name === 'Torso') ? '#0d69ac' : (name.includes('Leg') ? '#a1c48c' : '#f6d743') });
             if (name === 'Head') {
                 mats = [];
@@ -521,7 +835,7 @@ class AnimationApp {
 
             const mesh = new THREE.Mesh(geo, mats);
             mesh.castShadow = true; mesh.receiveShadow = true;
-            mesh.userData = group.userData; // link mesh to group properties
+            mesh.userData = group.userData;
             group.add(mesh); parent.add(group);
             this.rig[name] = group;
             return group;
@@ -558,14 +872,14 @@ class AnimationApp {
 
     applyLabeledParts() {
         Object.keys(this.rig).forEach(partName => {
-            if (partName === 'root' || this.rig[partName].userData.isProp) return; // Don't label props
+            if (partName === 'root' || this.rig[partName].userData.isProp) return;
             const group = this.rig[partName];
             const mesh = group.children.find(c => c.isMesh);
             if (mesh) {
                 if (!mesh.userData.originalMaterial) mesh.userData.originalMaterial = mesh.material;
                 const isHead = partName === 'Head'; const isTorso = partName === 'Torso';
                 const bg = isHead ? '#A3A2A5' : '#8B0000'; 
-                
+
                 mesh.material = [
                     this.createFaceMaterial({ bgColor: bg, text: 'R', drawBorders: true }), 
                     this.createFaceMaterial({ bgColor: bg, text: 'L', drawBorders: true }), 
@@ -574,7 +888,7 @@ class AnimationApp {
                     this.createFaceMaterial({ bgColor: bg, text: isHead ? '' : (isTorso ? 'FRONT' : 'F'), drawSmiley: isHead, drawBorders: true }), 
                     this.createFaceMaterial({ bgColor: bg, text: isTorso ? 'BACK' : 'B', drawBorders: true }) 
                 ];
-                if (this.selectedObject === group) this.setEmissiveHighlight(group, 0x222222);
+                if (this.selectedObjects.has(group)) this.setEmissiveHighlight(group, 0x222222);
             }
         });
     }
@@ -586,7 +900,7 @@ class AnimationApp {
             const mesh = group.children.find(c => c.isMesh);
             if (mesh && mesh.userData.originalMaterial) {
                 mesh.material = mesh.userData.originalMaterial;
-                if (this.selectedObject === group) this.setEmissiveHighlight(group, 0x222222);
+                if (this.selectedObjects.has(group)) this.setEmissiveHighlight(group, 0x222222);
             }
         });
     }
@@ -595,51 +909,60 @@ class AnimationApp {
     toggleMapsBuildPlugin() {
         const btn = document.getElementById('btn-plugin-maps');
         const ui = document.getElementById('maps-build-window');
-        
+
         if (!this.plugins.mapsAndBuild.installed) {
             this.plugins.mapsAndBuild.installed = true;
             btn.innerText = "Uninstall";
             btn.className = "btn-secondary px-3 py-1.5 rounded text-xs font-bold bg-red-900/40 text-red-300 border border-red-800 hover:bg-red-900/60 transition-all";
-            
-            // Show UI
+
             this.plugins.mapsAndBuild.minimized = false;
             ui.classList.remove('hidden');
             document.getElementById('minimized-maps-btn').classList.add('hidden');
-            
+
             this.showToast("Plugin Installed: Maps & Build");
         } else {
-            this.plugins.mapsAndBuild.installed = false;
-            btn.innerText = "Install";
-            btn.className = "btn-secondary px-3 py-1.5 rounded text-xs font-bold transition-all border-indigo-700/50 hover:border-indigo-500";
-            
-            // Hide UI entirely
-            ui.classList.add('hidden');
-            document.getElementById('minimized-maps-btn').classList.add('hidden');
-            
-            this.showToast("Plugin Removed: Maps & Build");
+            this.closeMapsBuild();
         }
     }
 
-    minimizeMapsBuildUI() {
+    minimizeMapsBuild() {
         document.getElementById('maps-build-window').classList.add('hidden');
         document.getElementById('minimized-maps-btn').classList.remove('hidden');
         this.plugins.mapsAndBuild.minimized = true;
     }
 
     maximizeMapsBuild() {
+        if (!this.plugins.mapsAndBuild.installed) {
+            this.toggleMapsBuildPlugin();
+            return;
+        }
         document.getElementById('maps-build-window').classList.remove('hidden');
         document.getElementById('minimized-maps-btn').classList.add('hidden');
         this.plugins.mapsAndBuild.minimized = false;
+    }
+
+    closeMapsBuild() {
+        const btn = document.getElementById('btn-plugin-maps');
+        const ui = document.getElementById('maps-build-window');
+
+        this.plugins.mapsAndBuild.installed = false;
+        btn.innerText = "Install";
+        btn.className = "btn-secondary px-3 py-1.5 rounded text-xs font-bold transition-all border-indigo-700/50 hover:border-indigo-500";
+
+        ui.classList.add('hidden');
+        document.getElementById('minimized-maps-btn').classList.add('hidden');
+
+        this.showToast("Plugin Removed: Maps & Build");
     }
 
     // PROP GENERATORS
     createDeskMesh() {
         const group = new THREE.Group();
         const mat = new THREE.MeshStandardMaterial({color: 0x8b5a2b, roughness: 0.8});
-        
+
         const top = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 2), mat);
         top.position.y = 1.5; group.add(top);
-        
+
         const legGeo = new THREE.BoxGeometry(0.2, 1.5, 0.2);
         const l1 = new THREE.Mesh(legGeo, mat); l1.position.set(-1.3, 0.75, -0.8); group.add(l1);
         const l2 = new THREE.Mesh(legGeo, mat); l2.position.set(1.3, 0.75, -0.8); group.add(l2);
@@ -653,16 +976,16 @@ class AnimationApp {
         const frameMat = new THREE.MeshStandardMaterial({color: 0x5c4033, roughness: 0.9});
         const mattressMat = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 1});
         const pillowMat = new THREE.MeshStandardMaterial({color: 0xe0e0e0});
-        
+
         const frame = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 4.4), frameMat);
         frame.position.y = 0.25; group.add(frame);
-        
+
         const mattress = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 4.2), mattressMat);
         mattress.position.y = 0.7; group.add(mattress);
-        
+
         const pillow = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.25, 0.8), pillowMat);
         pillow.position.set(0, 1.0, -1.4); group.add(pillow);
-        
+
         return group;
     }
 
@@ -673,18 +996,17 @@ class AnimationApp {
             uniqueName = type;
             while(this.partsList.includes(uniqueName)) {
                 count++;
-                uniqueName = `${type} ${count}`;
+                uniqueName = type + " " + count;
             }
         }
-        
+
         let group;
         if(type === 'Desk') group = this.createDeskMesh();
         else if(type === 'Bed') group = this.createBedMesh();
-        else return; // unknown
-        
-        group.position.set(3, 0, -3); // Spawn slightly to the side
-        
-        // Critical: Set userData so raycaster catches it and it can be animated
+        else return;
+
+        group.position.set(3, 0, -3);
+
         group.userData = { 
             isRigPart: true, 
             isProp: true,
@@ -694,7 +1016,7 @@ class AnimationApp {
             defaultPosition: group.position.clone(), 
             defaultRotation: group.rotation.clone() 
         };
-        
+
         group.traverse(child => {
             if(child.isMesh) {
                 child.userData = group.userData;
@@ -706,13 +1028,149 @@ class AnimationApp {
         this.scene.add(group);
         this.rig[uniqueName] = group;
         this.partsList.push(uniqueName);
-        
+
         this.populateHierarchy();
         this.renderKeyframesUI();
-        this.showToast(`Spawned ${uniqueName}!`);
+        this.showToast("Spawned " + uniqueName + "!");
         this.autoSave();
     }
 
+    // --- ADVANCED SMOOTHING SYSTEM ---
+    showSmoothingOptions() {
+        const popup = document.getElementById('smoothing-popup');
+        popup.classList.toggle('hidden');
+    }
+
+    applyAdvancedSmoothing() {
+        if (this.selectedKeyframes.size === 0) { 
+            this.showToast("Select keyframes first"); 
+            return; 
+        }
+
+        const type = document.getElementById('smooth-type').value;
+        const intensity = parseInt(document.getElementById('smooth-intensity').value) / 10;
+        const iterations = parseInt(document.getElementById('smooth-iterations').value);
+
+        this.pushUndoState('smooth');
+
+        const groups = {};
+        this.selectedKeyframes.forEach(kf => {
+            if (!groups[kf._partName]) groups[kf._partName] = [];
+            groups[kf._partName].push(kf);
+        });
+
+        let smoothedCount = 0;
+
+        Object.keys(groups).forEach(partName => {
+            const track = this.keyframes[partName];
+            groups[partName].sort((a,b) => a.frame - b.frame);
+
+            for (let iter = 0; iter < iterations; iter++) {
+                const tempPos = new Map();
+                const tempRot = new Map();
+
+                groups[partName].forEach(kf => {
+                    const idx = track.indexOf(kf);
+                    if (idx > 0 && idx < track.length - 1) {
+                        const prev = track[idx - 1];
+                        const next = track[idx + 1];
+
+                        let newPos, newRot;
+
+                        if (type === 'average') {
+                            newPos = new THREE.Vector3().addVectors(prev.position, next.position).multiplyScalar(0.5);
+                            newPos.lerp(kf.position, 1 - intensity);
+
+                            const qPrev = new THREE.Quaternion().setFromEuler(prev.rotation);
+                            const qNext = new THREE.Quaternion().setFromEuler(next.rotation);
+                            const qAvg = qPrev.clone().slerp(qNext, 0.5);
+                            const qCurr = new THREE.Quaternion().setFromEuler(kf.rotation);
+                            newRot = qCurr.clone().slerp(qAvg, intensity);
+
+                        } else if (type === 'gaussian') {
+                            // Gaussian-like weighted average
+                            const w1 = 0.25, w2 = 0.5, w3 = 0.25;
+                            newPos = new THREE.Vector3()
+                                .addScaledVector(prev.position, w1)
+                                .addScaledVector(kf.position, w2)
+                                .addScaledVector(next.position, w3);
+                            newPos.lerp(kf.position, 1 - intensity);
+
+                            const qPrev = new THREE.Quaternion().setFromEuler(prev.rotation);
+                            const qCurr = new THREE.Quaternion().setFromEuler(kf.rotation);
+                            const qNext = new THREE.Quaternion().setFromEuler(next.rotation);
+                            newRot = new THREE.Quaternion()
+                                .addScaledVector(qPrev.clone(), w1)
+                                .addScaledVector(qCurr.clone(), w2)
+                                .addScaledVector(qNext.clone(), w3);
+                            newRot.normalize();
+
+                        } else if (type === 'bezier') {
+                            // Bezier curve interpolation for smoother motion
+                            const t = 0.5;
+                            const t2 = t * t;
+                            const t3 = t2 * t;
+                            const mt = 1 - t;
+                            const mt2 = mt * mt;
+                            const mt3 = mt2 * mt;
+
+                            // Control points: use prev and next as control points
+                            newPos = new THREE.Vector3()
+                                .addScaledVector(prev.position, mt3)
+                                .addScaledVector(prev.position.clone().lerp(kf.position, 0.5), 3 * mt2 * t)
+                                .addScaledVector(kf.position.clone().lerp(next.position, 0.5), 3 * mt * t2)
+                                .addScaledVector(next.position, t3);
+                            newPos.lerp(kf.position, 1 - intensity);
+
+                            const qPrev = new THREE.Quaternion().setFromEuler(prev.rotation);
+                            const qNext = new THREE.Quaternion().setFromEuler(next.rotation);
+                            newRot = qPrev.clone().slerp(qNext, t);
+
+                        } else if (type === 'spline') {
+                            // Catmull-Rom spline interpolation
+                            const p0 = track[Math.max(0, idx - 2)]?.position || prev.position;
+                            const p1 = prev.position;
+                            const p2 = kf.position;
+                            const p3 = track[Math.min(track.length - 1, idx + 2)]?.position || next.position;
+
+                            const t = 0.5;
+                            const t2 = t * t;
+                            const t3 = t2 * t;
+
+                            newPos = new THREE.Vector3()
+                                .addScaledVector(p0, -0.5 * t3 + t2 - 0.5 * t)
+                                .addScaledVector(p1, 1.5 * t3 - 2.5 * t2 + 1)
+                                .addScaledVector(p2, -1.5 * t3 + 2 * t2 + 0.5 * t)
+                                .addScaledVector(p3, 0.5 * t3 - 0.5 * t2);
+                            newPos.lerp(kf.position, 1 - intensity);
+
+                            const qPrev = new THREE.Quaternion().setFromEuler(prev.rotation);
+                            const qNext = new THREE.Quaternion().setFromEuler(next.rotation);
+                            newRot = qPrev.clone().slerp(qNext, t);
+                        }
+
+                        tempPos.set(kf, newPos);
+                        tempRot.set(kf, newRot);
+                        smoothedCount++;
+                    }
+                });
+
+                tempPos.forEach((pos, kf) => kf.position.copy(pos));
+                tempRot.forEach((rot, kf) => kf.rotation.setFromQuaternion(rot));
+            }
+        });
+
+        if (smoothedCount > 0) {
+            this.applyFrame(this.currentFrame); 
+            this.updateUIValues();
+            this.showToast("Advanced Smoothing Applied! (" + smoothedCount + " points)"); 
+            this.autoSave();
+        } else { 
+            this.showToast("Requires selected inner keyframes"); 
+        }
+
+        document.getElementById('smoothing-popup').classList.add('hidden');
+    }
 
     // --- CORE LOGIC ---
 
@@ -721,11 +1179,11 @@ class AnimationApp {
             handle.addEventListener('mousedown', (e) => {
                 if(e.target.tagName === 'BUTTON' || e.target.closest('button')) return; 
                 e.preventDefault();
-                
+
                 const targetId = handle.getAttribute('data-target');
                 const panel = document.getElementById(targetId);
                 if(!panel) return;
-                
+
                 const startX = e.clientX;
                 const startY = e.clientY;
                 const initialLeft = panel.offsetLeft;
@@ -734,17 +1192,17 @@ class AnimationApp {
                 const onMove = (ev) => {
                     const dx = ev.clientX - startX;
                     const dy = ev.clientY - startY;
-                    panel.style.left = `${initialLeft + dx}px`;
-                    panel.style.top = `${initialTop + dy}px`;
-                    panel.style.right = 'auto'; // Break free from right/bottom snapping
+                    panel.style.left = (initialLeft + dx) + 'px';
+                    panel.style.top = (initialTop + dy) + 'px';
+                    panel.style.right = 'auto';
                     panel.style.bottom = 'auto';
                 };
-                
+
                 const onUp = () => {
                     document.removeEventListener('mousemove', onMove);
                     document.removeEventListener('mouseup', onUp);
                 };
-                
+
                 document.addEventListener('mousemove', onMove);
                 document.addEventListener('mouseup', onUp);
             });
@@ -782,13 +1240,13 @@ class AnimationApp {
         document.getElementById('panel-transform').classList.toggle('hidden', tabName !== 'transform');
         document.getElementById('panel-vfx').classList.toggle('hidden', tabName !== 'vfx');
         document.getElementById('panel-plugins').classList.toggle('hidden', tabName !== 'plugins');
-        
+
         const tBtn = document.getElementById('tab-btn-transform');
         const vBtn = document.getElementById('tab-btn-vfx');
         const pBtn = document.getElementById('tab-btn-plugins');
 
         const baseClass = "flex-1 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ";
-        
+
         tBtn.className = baseClass + (tabName === 'transform' ? "text-blue-400 border-blue-500" : "text-gray-500 border-transparent hover:text-gray-300");
         vBtn.className = baseClass + (tabName === 'vfx' ? "text-purple-400 border-purple-500" : "text-gray-500 border-transparent hover:text-gray-300");
         pBtn.className = baseClass + (tabName === 'plugins' ? "text-green-400 border-green-500" : "text-gray-500 border-transparent hover:text-gray-300");
@@ -809,18 +1267,24 @@ class AnimationApp {
             if(!this.rig[name]) return;
             const div = document.createElement('div');
             const isProp = this.rig[name].userData.isProp;
-            
-            div.className = "px-2 py-1.5 rounded hover:bg-gray-700 cursor-pointer text-gray-400 text-sm flex items-center gap-2 transition-colors";
-            
-            // Icon depending on prop
-            let iconSvg = `<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>`;
-            if (isProp && name.includes('Desk')) iconSvg = `<span class="w-4 h-4 flex items-center justify-center text-xs">🪑</span>`;
-            if (isProp && name.includes('Bed')) iconSvg = `<span class="w-4 h-4 flex items-center justify-center text-xs">🛏️</span>`;
-            
-            div.innerHTML = `${iconSvg} <span class="${isProp ? 'text-indigo-300' : ''}">${name}</span>`;
-            div.onclick = () => this.selectPart(this.rig[name], name, div);
+            const isSelected = this.selectedObjects.has(this.rig[name]);
+            const isPrimary = this.selectedObject === this.rig[name];
+
+            div.className = "hierarchy-item px-2 py-1.5 rounded hover:bg-gray-700 cursor-pointer text-gray-400 text-sm flex items-center gap-2 transition-colors";
+            if (isSelected) {
+                div.classList.add(isPrimary ? 'selected' : 'multi-selected');
+            }
+
+            let iconSvg = '<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
+            if (isProp && name.includes('Desk')) iconSvg = '<span class="w-4 h-4 flex items-center justify-center text-xs">🪑</span>';
+            if (isProp && name.includes('Bed')) iconSvg = '<span class="w-4 h-4 flex items-center justify-center text-xs">🛏️</span>';
+
+            div.innerHTML = iconSvg + ' <span class="' + (isProp ? 'text-indigo-300' : '') + '">' + name + '</span>';
+            div.onclick = (e) => this.selectPart(this.rig[name], name, div, e.ctrlKey || e.metaKey);
             list.appendChild(div);
         });
+
+        document.getElementById('selected-count').innerText = this.selectedObjects.size;
     }
 
     onMouseDown(event) {
@@ -830,14 +1294,26 @@ class AnimationApp {
             return;
         } 
         if (event.button === 0) { 
+            // Don't intercept clicks on UI panels
             if(event.target.closest('.panel') && !event.target.closest('#canvas-container')) return;
-            if (this.transformControl.axis !== null) return;
+
+            // Don't intercept clicks on the gizmo itself
+            if (this.transformControl.dragging) return;
 
             this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
             this.raycaster.setFromCamera(this.mouse, this.camera);
-            const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+
+            // Exclude the transform control gizmo from raycasting
+            const sceneObjects = [];
+            this.scene.traverse(child => {
+                if (child !== this.transformControl && !child.isGizmo) {
+                    sceneObjects.push(child);
+                }
+            });
+
+            const intersects = this.raycaster.intersectObjects(sceneObjects, true);
 
             let found = null;
             for (let i = 0; i < intersects.length; i++) {
@@ -848,9 +1324,12 @@ class AnimationApp {
                 const name = found.userData.name;
                 const uiEls = document.getElementById('hierarchy-list').children;
                 let uiEl = Array.from(uiEls).find(el => el.innerText.includes(name));
-                this.selectPart(found.userData.parentGroup, name, uiEl);
+                this.selectPart(found.userData.parentGroup, name, uiEl, event.ctrlKey || event.metaKey);
             } else {
-                this.deselect();
+                // Clicked on empty space - only deselect if NOT holding Ctrl
+                if (!event.ctrlKey && !event.metaKey) {
+                    this.deselectAll();
+                }
             }
         }
     }
@@ -867,16 +1346,23 @@ class AnimationApp {
             this.camera.lookAt(0, 2, 0); 
             this.previousMousePosition = { x: event.clientX, y: event.clientY };
         } else {
-            if(event.target.closest('.panel') || this.transformControl.axis !== null) {
+            if(event.target.closest('.panel') || this.transformControl.dragging) {
                 document.getElementById('part-tooltip').classList.add('hidden');
                 return;
             }
-            
+
             this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             this.raycaster.setFromCamera(this.mouse, this.camera);
-            const intersects = this.raycaster.intersectObjects(this.scene.children, true);
-            
+
+            // Exclude transform control from tooltip raycasting
+            const sceneObjects = [];
+            this.scene.traverse(child => {
+                if (child !== this.transformControl) sceneObjects.push(child);
+            });
+
+            const intersects = this.raycaster.intersectObjects(sceneObjects, true);
+
             let found = null;
             for (let i = 0; i < intersects.length; i++) {
                 if (intersects[i].object.userData.isRigPart) { found = intersects[i].object; break; }
@@ -903,10 +1389,14 @@ class AnimationApp {
             if (key === 'a') { event.preventDefault(); this.selectAllKeyframes(); }
             else if (key === 'c') { event.preventDefault(); this.copyKeyframes(); }
             else if (key === 'v') { event.preventDefault(); this.pasteKeyframes(); }
+            else if (key === 'z') { event.preventDefault(); this.undo(); }
+            else if (key === 'y') { event.preventDefault(); this.redo(); }
         } else {
             if (key === 'r' && this.transformControl) {
                 const newMode = this.transformControl.mode === 'rotate' ? 'translate' : 'rotate';
                 this.transformControl.setMode(newMode);
+                // Re-apply Roblox styling after mode change
+                setTimeout(() => this.styleTransformControlsLikeRoblox(), 50);
                 const badge = document.getElementById('gizmo-mode-badge');
                 if (newMode === 'translate') {
                     badge.innerText = 'Move'; badge.className = 'bg-green-600/30 text-green-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold';
@@ -924,7 +1414,7 @@ class AnimationApp {
                     badge.innerText = 'Part'; badge.className = 'bg-orange-600/30 text-orange-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold';
                 }
             }
-            if (key === 'm') this.smoothSelectedKeyframes();
+            if (key === 'm') this.applyAdvancedSmoothing();
             if (key === 'delete' || key === 'backspace') this.deleteSelectedKeyframes();
         }
     }
@@ -948,32 +1438,80 @@ class AnimationApp {
         if (this.keys.q) this.camera.position.y -= this.cameraSpeed;
     }
 
-    selectPart(object3D, name, domElement) {
-        if (this.selectedObject) {
-            this.setEmissiveHighlight(this.selectedObject, 0x000000);
-            if(this.selectedDom) this.selectedDom.classList.remove('bg-blue-900', 'text-white');
+    // --- MULTI-SELECTION LOGIC ---
+    selectPart(object3D, name, domElement, isMultiSelect = false) {
+        // If clicking without Ctrl, always clear and select fresh
+        if (!isMultiSelect) {
+            this.deselectAll();
+            this.selectedObjects.add(object3D);
+            this.selectedObject = object3D;
+            this.setEmissiveHighlight(object3D, 0x222222);
+            if (domElement) this.selectedDomElements.set(name, domElement);
+            document.getElementById('selected-part-name').innerText = name;
+            this.updateUIValues();
+            this.transformControl.attach(object3D);
+            this.populateHierarchy();
+            return;
         }
 
-        this.selectedObject = object3D;
-        this.selectedDom = domElement;
+        // Ctrl+Click logic
+        if (this.selectedObjects.has(object3D)) {
+            // Already selected - if it's the primary, do nothing (can't deselect primary)
+            // If it's a secondary selection, remove it
+            if (this.selectedObject !== object3D) {
+                this.removeFromSelection(object3D, name);
+            }
+            return;
+        }
 
+        // Ctrl+Click on new part - add to selection AND make it the new PRIMARY
+        // This way the gizmo moves to the newly clicked part
+        this.selectedObjects.add(object3D);
+        this.selectedObject = object3D; // New primary
         this.setEmissiveHighlight(object3D, 0x222222);
-
-        if(domElement) {
-            domElement.classList.add('bg-blue-900', 'text-white');
-            domElement.classList.remove('text-gray-400');
-        }
+        if (domElement) this.selectedDomElements.set(name, domElement);
 
         document.getElementById('selected-part-name').innerText = name;
         this.updateUIValues();
-        this.transformControl.attach(object3D);
+        this.transformControl.attach(object3D); // Gizmo moves to new primary!
+        this.populateHierarchy();
+    }
+
+    removeFromSelection(object3D, name) {
+        this.selectedObjects.delete(object3D);
+        this.setEmissiveHighlight(object3D, 0x000000);
+        this.selectedDomElements.delete(name);
+
+        // If we removed the primary, pick a new primary
+        if (this.selectedObject === object3D) {
+            const remaining = Array.from(this.selectedObjects);
+            this.selectedObject = remaining.length > 0 ? remaining[remaining.length - 1] : null;
+            if (this.selectedObject) {
+                this.transformControl.attach(this.selectedObject);
+                document.getElementById('selected-part-name').innerText = this.selectedObject.userData.name;
+            } else {
+                this.transformControl.detach();
+                document.getElementById('selected-part-name').innerText = "None";
+            }
+        }
+
+        this.populateHierarchy();
+    }
+
+    deselectAll() {
+        this.selectedObjects.forEach(obj => {
+            this.setEmissiveHighlight(obj, 0x000000);
+        });
+        this.selectedObjects.clear();
+        this.selectedDomElements.clear();
+        this.selectedObject = null;
+        this.transformControl.detach();
+        document.getElementById('selected-part-name').innerText = "None";
+        this.populateHierarchy();
     }
 
     deselect() {
-        if (this.selectedObject) this.setEmissiveHighlight(this.selectedObject, 0x000000);
-        this.selectedObject = null;
-        document.getElementById('selected-part-name').innerText = "None";
-        this.transformControl.detach();
+        this.deselectAll();
     }
 
     updateUIValues() {
@@ -1031,7 +1569,7 @@ class AnimationApp {
         const tracksArea = document.getElementById('timeline-tracks-container');
         const rect = tracksArea.getBoundingClientRect();
         const scrollLeft = tracksArea.scrollLeft;
-        
+
         let x = event.clientX - rect.left + scrollLeft;
         let totalWidth = rect.width; 
 
@@ -1044,16 +1582,16 @@ class AnimationApp {
     startMarquee(e) {
         this.isMarquee = true;
         document.getElementById('part-tooltip').classList.add('hidden');
-        
+
         const container = document.getElementById('timeline-tracks-container');
         const box = document.getElementById('selection-box');
         const rect = container.getBoundingClientRect();
 
         this.marqueeStart.x = e.clientX - rect.left + container.scrollLeft;
         this.marqueeStart.y = e.clientY - rect.top + container.scrollTop;
-        
-        box.style.left = `${this.marqueeStart.x}px`;
-        box.style.top = `${this.marqueeStart.y}px`;
+
+        box.style.left = this.marqueeStart.x + 'px';
+        box.style.top = this.marqueeStart.y + 'px';
         box.style.width = '0px';
         box.style.height = '0px';
         box.classList.remove('hidden');
@@ -1091,21 +1629,21 @@ class AnimationApp {
         const width = Math.abs(curX - this.marqueeStart.x);
         const height = Math.abs(curY - this.marqueeStart.y);
 
-        box.style.left = `${left}px`;
-        box.style.top = `${top}px`;
-        box.style.width = `${width}px`;
-        box.style.height = `${height}px`;
+        box.style.left = left + 'px';
+        box.style.top = top + 'px';
+        box.style.width = width + 'px';
+        box.style.height = height + 'px';
 
         const boxRect = box.getBoundingClientRect();
         const dots = container.querySelectorAll('.keyframe-dot');
-        
+
         this.selectedKeyframes = new Set(this.preMarqueeSelection);
 
         dots.forEach(dot => {
             const dotRect = dot.getBoundingClientRect();
             const intersect = !(boxRect.right < dotRect.left || boxRect.left > dotRect.right || 
                                 boxRect.bottom < dotRect.top || boxRect.top > dotRect.bottom);
-            
+
             if (intersect) {
                 const p = dot.dataset.part;
                 const f = parseInt(dot.dataset.frame);
@@ -1127,32 +1665,32 @@ class AnimationApp {
     renderKeyframesUI() {
         const labelsContainer = document.getElementById('labels-container');
         const tracksContainer = document.getElementById('keyframes-container');
-        
+
         labelsContainer.innerHTML = '';
         tracksContainer.innerHTML = '';
 
         this.partsList.forEach(partName => {
             const label = document.createElement('div');
-            
+
             const isProp = this.rig[partName]?.userData?.isProp;
-            label.className = `h-10 flex items-center px-3 text-[11px] font-bold border-b border-gray-700 bg-gray-800/50 whitespace-nowrap overflow-hidden text-ellipsis ${isProp ? 'text-indigo-400' : 'text-gray-400'}`;
+            label.className = 'h-10 flex items-center px-3 text-[11px] font-bold border-b border-gray-700 bg-gray-800/50 whitespace-nowrap overflow-hidden text-ellipsis ' + (isProp ? 'text-indigo-400' : 'text-gray-400');
             label.innerText = partName;
             labelsContainer.appendChild(label);
-            
+
             const row = document.createElement('div');
             row.className = 'h-10 border-b border-gray-700/50 relative w-full bg-gray-800/10 hover:bg-gray-800/30 transition-colors';
-            
+
             if (this.keyframes[partName]) {
                 this.keyframes[partName].forEach(kf => {
                     const pct = (kf.frame / this.totalFrames) * 100;
                     const dot = document.createElement('div');
                     dot.className = 'keyframe-dot';
                     if (this.selectedKeyframes.has(kf)) dot.classList.add('selected');
-                    dot.style.left = `calc(${pct}%)`; 
-                    
+                    dot.style.left = 'calc(' + pct + '%)'; 
+
                     dot.dataset.part = partName;
                     dot.dataset.frame = kf.frame;
-                    
+
                     dot.onmousedown = (e) => this.onKeyframeMouseDown(e, partName, kf);
                     row.appendChild(dot);
                 });
@@ -1177,13 +1715,13 @@ class AnimationApp {
         this.isDraggingKeyframes = true;
         const startX = event.clientX;
         const container = document.getElementById('timeline-tracks-container');
-        
+
         this.selectedKeyframes.forEach(skf => skf._startDragFrame = skf.frame);
-        
+
         const onMouseMove = (e) => {
             const deltaX = e.clientX - startX;
             const deltaFrame = Math.round((deltaX / container.getBoundingClientRect().width) * this.totalFrames);
-            
+
             this.selectedKeyframes.forEach(skf => {
                 let newFrame = skf._startDragFrame + deltaFrame;
                 newFrame = Math.max(0, Math.min(this.totalFrames, newFrame));
@@ -1207,8 +1745,8 @@ class AnimationApp {
 
     keyframeCurrent(isAuto = false) {
         if(!this.selectedObject) return;
-        const name = document.getElementById('selected-part-name').innerText;
-        if(name === "None") return;
+        const name = this.selectedObject.userData.name;
+        if(!name) return;
 
         if(!this.keyframes[name]) this.keyframes[name] = [];
         let existingKf = this.keyframes[name].find(k => k.frame === this.currentFrame);
@@ -1229,7 +1767,7 @@ class AnimationApp {
             };
             this.keyframes[name].push(newKf);
             this.keyframes[name].sort((a,b) => a.frame - b.frame);
-            
+
             if (!isAuto) {
                 this.selectedKeyframes.clear();
                 this.selectedKeyframes.add(newKf);
@@ -1237,17 +1775,22 @@ class AnimationApp {
             this.renderKeyframesUI();
             if(!isAuto) this.showToast("Keyframe Added");
         }
-        if (!isAuto) this.autoSave(); 
+        if (!isAuto) {
+            this.pushUndoState('keyframe');
+            this.autoSave();
+        }
     }
 
     updateScrubber() {
         const pct = (this.currentFrame / this.totalFrames) * 100;
-        document.getElementById('scrubber').style.left = `${pct}%`;
-        
+        document.getElementById('scrubber').style.left = pct + '%';
+
         const sec = Math.floor(this.currentFrame / this.fps);
         const frm = this.currentFrame % this.fps;
         const totSec = Math.floor(this.totalFrames / this.fps);
-        document.getElementById('time-display').innerText = `${sec.toString().padStart(2,'0')}:${frm.toString().padStart(2,'0')} / ${totSec.toString().padStart(2,'0')}:00`;
+        document.getElementById('time-display').innerText = 
+            sec.toString().padStart(2,'0') + ':' + frm.toString().padStart(2,'0') + ' / ' + 
+            totSec.toString().padStart(2,'0') + ':00';
     }
 
     applyFrame(frame) {
@@ -1257,8 +1800,7 @@ class AnimationApp {
             if (!obj) return;
 
             const kfs = this.keyframes[name];
-            
-            // Smart Reset: Revert to default spawn if no keyframes
+
             if (!kfs || kfs.length === 0) {
                 if (obj.userData.defaultPosition && obj.userData.defaultRotation) {
                     obj.position.copy(obj.userData.defaultPosition);
@@ -1283,7 +1825,7 @@ class AnimationApp {
                 obj.rotation.setFromQuaternion(new THREE.Quaternion().copy(qPrev).slerp(qNext, progress));
             }
         });
-        
+
         if (this.selectedObject) {
             this.updateUIValues();
             if(this.transformControl) this.transformControl.updateMatrixWorld();
@@ -1318,6 +1860,7 @@ class AnimationApp {
 
     pasteKeyframes() {
         if (this.clipboard.length === 0) return;
+        this.pushUndoState('paste');
         this.selectedKeyframes.clear();
         this.clipboard.forEach(clip => {
             const targetFrame = this.currentFrame + clip.frameOffset;
@@ -1338,6 +1881,7 @@ class AnimationApp {
 
     deleteSelectedKeyframes() {
         if (this.selectedKeyframes.size === 0) return;
+        this.pushUndoState('delete');
         Object.keys(this.keyframes).forEach(partName => {
             this.keyframes[partName] = this.keyframes[partName].filter(kf => !this.selectedKeyframes.has(kf));
         });
@@ -1349,66 +1893,12 @@ class AnimationApp {
     }
 
     smoothSelectedKeyframes() {
-        if (this.selectedKeyframes.size === 0) { this.showToast("Select keyframes first"); return; }
-        
-        const groups = {};
-        this.selectedKeyframes.forEach(kf => {
-            if (!groups[kf._partName]) groups[kf._partName] = [];
-            groups[kf._partName].push(kf);
-        });
-        
-        let smoothedCount = 0;
-        const iterations = 3; 
-
-        Object.keys(groups).forEach(partName => {
-            const track = this.keyframes[partName];
-            groups[partName].sort((a,b) => a.frame - b.frame);
-            
-            for (let iter = 0; iter < iterations; iter++) {
-                const tempPos = new Map();
-                const tempRot = new Map();
-
-                groups[partName].forEach(kf => {
-                    const idx = track.indexOf(kf);
-                    if (idx > 0 && idx < track.length - 1) {
-                        const prev = track[idx - 1];
-                        const next = track[idx + 1];
-                        
-                        const avgPos = new THREE.Vector3().addVectors(prev.position, next.position).multiplyScalar(0.5);
-                        const newPos = new THREE.Vector3().copy(kf.position).lerp(avgPos, 0.5);
-                        tempPos.set(kf, newPos);
-
-                        const qPrev = new THREE.Quaternion().setFromEuler(prev.rotation);
-                        const qNext = new THREE.Quaternion().setFromEuler(next.rotation);
-                        const qAvg = qPrev.clone().slerp(qNext, 0.5);
-                        
-                        const qCurr = new THREE.Quaternion().setFromEuler(kf.rotation);
-                        const newRot = qCurr.clone().slerp(qAvg, 0.5);
-                        tempRot.set(kf, newRot);
-                        
-                        smoothedCount++;
-                    }
-                });
-
-                tempPos.forEach((pos, kf) => kf.position.copy(pos));
-                tempRot.forEach((rot, kf) => kf.rotation.setFromQuaternion(rot));
-            }
-        });
-
-        if (smoothedCount > 0) {
-            this.applyFrame(this.currentFrame); 
-            this.updateUIValues();
-            this.showToast("Curves Smoothed Beautifully!"); 
-            this.autoSave();
-        } else { 
-            this.showToast("Requires selected inner keyframes"); 
-        }
+        this.showSmoothingOptions();
     }
 
     serializeAnimation() {
         const animName = document.getElementById('anim-name').value || 'Animation';
-        
-        // Save the metadata about props so we can recreate them on load!
+
         const propsData = {};
         Object.keys(this.rig).forEach(k => {
             if(this.rig[k].userData.isProp) {
@@ -1417,7 +1907,7 @@ class AnimationApp {
         });
 
         return JSON.stringify({ 
-            version: "1.6", name: animName, totalFrames: this.totalFrames, 
+            version: "2.0", name: animName, totalFrames: this.totalFrames, 
             fps: this.fps, currentFrame: this.currentFrame, tracks: this.keyframes,
             props: propsData 
         }, (key, value) => {
@@ -1431,8 +1921,7 @@ class AnimationApp {
     loadAnimationData(parsed) {
         if (!parsed.tracks) return;
         if (parsed.name) document.getElementById('anim-name').value = parsed.name;
-        
-        // Dynamically spawn missing props from the save file!
+
         if (parsed.props) {
             Object.keys(parsed.props).forEach(propName => {
                 if (!this.partsList.includes(propName)) {
@@ -1440,10 +1929,9 @@ class AnimationApp {
                 }
             });
         }
-        
+
         const importedKeyframes = {};
         for (const [partName, track] of Object.entries(parsed.tracks)) {
-            // Also serve as a fallback if `props` metadata wasn't found but a track exists
             if (!this.partsList.includes(partName)) {
                 if (partName.includes('Desk')) this.spawnProp('Desk', partName);
                 else if (partName.includes('Bed')) this.spawnProp('Bed', partName);
@@ -1459,7 +1947,7 @@ class AnimationApp {
         if (parsed.totalFrames) this.totalFrames = parsed.totalFrames;
         if (parsed.fps) this.fps = parsed.fps;
         if (parsed.currentFrame !== undefined) this.currentFrame = parsed.currentFrame;
-        
+
         this.selectedKeyframes.clear();
         this.renderKeyframesUI();
         this.updateScrubber();
@@ -1482,9 +1970,9 @@ class AnimationApp {
         const safeName = name.replace(/[^a-z0-9_-]/gi, '_'); 
         const url = URL.createObjectURL(new Blob([this.serializeAnimation()], {type: 'application/json'}));
         const a = document.createElement('a');
-        a.href = url; a.download = `${safeName}.json`;
+        a.href = url; a.download = safeName + '.json';
         a.click(); URL.revokeObjectURL(url);
-        this.showToast(`Exported ${safeName}.json`);
+        this.showToast("Exported " + safeName + ".json");
     }
 
     handleImport(event) {
@@ -1492,6 +1980,7 @@ class AnimationApp {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
+                this.pushUndoState('import');
                 this.loadAnimationData(JSON.parse(e.target.result)); this.autoSave(); this.showToast("Animation Imported");
             } catch (err) { alert("Invalid JSON file."); }
         };
