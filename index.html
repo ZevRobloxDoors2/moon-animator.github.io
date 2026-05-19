@@ -144,6 +144,84 @@
             opacity: 0.4;
             cursor: not-allowed;
         }
+    
+        /* VFX Styles */
+        .vfx-item {
+            background: rgba(50, 40, 60, 0.6);
+            border: 1px solid #6b21a8;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        .vfx-item:hover {
+            border-color: #a855f7;
+            background: rgba(60, 50, 75, 0.7);
+        }
+        .vfx-item.active {
+            border-color: #22d3ee;
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+        }
+        .vfx-timeline-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 15;
+            border: 2px solid white;
+            box-shadow: 0 0 6px rgba(255,255,255,0.5);
+        }
+        .vfx-timeline-dot:hover {
+            transform: translate(-50%, -50%) scale(1.4);
+        }
+        .vfx-preset-btn {
+            background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
+            border: 1px solid #8b5cf6;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .vfx-preset-btn:hover {
+            filter: brightness(1.2);
+            transform: translateY(-1px);
+        }
+        .vfx-color-picker {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 2px solid #4b5563;
+            cursor: pointer;
+            padding: 0;
+            overflow: hidden;
+        }
+        .vfx-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: #374151;
+            outline: none;
+        }
+        .vfx-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #a855f7;
+            cursor: pointer;
+            border: 2px solid white;
+        }
+
     </style>
 <base target="_blank">
 </head>
@@ -165,7 +243,7 @@
     <div class="absolute top-0 left-0 w-full h-14 panel flex items-center justify-between px-4 z-20 border-b border-gray-700" style="position: fixed;">
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/50">M</div>
-            <h1 class="text-gray-200 font-semibold tracking-wide flex items-center gap-2">Moon Animator <span class="text-xs text-blue-400 font-normal">v2.0</span></h1>
+            <h1 class="text-gray-200 font-semibold tracking-wide flex items-center gap-2">Moon Animator <span class="text-xs text-blue-400 font-normal">v2.1</span></h1>
 
             <div class="w-px h-6 bg-gray-600 mx-2"></div>
             <input type="text" id="anim-name" value="My_Animation" class="bg-gray-900 border border-gray-600 text-gray-300 text-sm px-2 py-1 rounded focus:border-blue-500 outline-none w-48" placeholder="Animation Name" title="Animation Name">
@@ -296,13 +374,31 @@
         </div>
 
         <!-- VFX Panel -->
-        <div id="panel-vfx" class="hidden flex-1 flex flex-col p-6 items-center justify-center text-center bg-gradient-to-b from-gray-800/30 to-gray-900/50">
-            <div class="w-16 h-16 bg-purple-900/40 rounded-full flex items-center justify-center mb-4 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-                <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+        <div id="panel-vfx" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-900/50">
+            <div class="p-3 border-b border-gray-700 bg-gray-800/30">
+                <div class="text-xs font-semibold text-gray-400 uppercase mb-2">VFX Presets</div>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="app.addVFX('fire')" class="vfx-preset-btn">🔥 Fire</button>
+                    <button onclick="app.addVFX('smoke')" class="vfx-preset-btn">💨 Smoke</button>
+                    <button onclick="app.addVFX('sparks')" class="vfx-preset-btn">✨ Sparks</button>
+                    <button onclick="app.addVFX('magic')" class="vfx-preset-btn">🔮 Magic</button>
+                    <button onclick="app.addVFX('trail')" class="vfx-preset-btn">💫 Trail</button>
+                    <button onclick="app.addVFX('explosion')" class="vfx-preset-btn">💥 Explosion</button>
+                </div>
             </div>
-            <h3 class="font-bold text-gray-200 text-lg mb-2">VFX Tools</h3>
-            <p class="text-xs text-gray-400 mb-6 leading-relaxed">VFX is coming in the next update! You will soon be able to add dynamic particles, trails, and impact effects.</p>
-            <div class="px-4 py-1.5 bg-gray-800 border border-gray-600 rounded text-xs font-bold text-purple-300 uppercase tracking-widest">Coming Soon</div>
+
+            <div class="flex-1 overflow-y-auto p-3">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-semibold text-gray-400 uppercase">Active VFX</span>
+                    <span id="vfx-count" class="text-xs text-purple-400 font-bold">0</span>
+                </div>
+                <div id="vfx-list" class="space-y-2"></div>
+            </div>
+
+            <div class="p-3 border-t border-gray-700 bg-gray-800/30">
+                <div class="text-[10px] text-gray-500 mb-1">Selected VFX appears on timeline</div>
+                <div class="text-[10px] text-gray-500">Drag timeline dots to adjust timing</div>
+            </div>
         </div>
 
         <!-- Plugins Panel -->
@@ -421,6 +517,15 @@
             </h2>
             <div class="space-y-5 max-h-80 overflow-y-auto text-sm pr-2 pb-2">
                 <div>
+                    <h3 class="text-purple-400 font-bold text-base flex items-center gap-2">🔮 v2.1 - VFX System!</h3>
+                    <ul class="list-disc pl-5 mt-2 space-y-1.5 text-gray-200">
+                        <li><span class="text-white font-semibold">VFX Effects:</span> Add Fire, Smoke, Sparks, Magic, Trails, and Explosions to your animations!</li>
+                        <li><span class="text-white font-semibold">Timeline Integration:</span> VFX appears on the timeline with draggable start/end points. Control exactly when effects activate.</li>
+                        <li><span class="text-white font-semibold">Part Attachment:</span> Attach VFX to any rig part or place them freely in the scene.</li>
+                        <li><span class="text-white font-semibold">Customizable:</span> Adjust color, size, intensity, and timing for each effect.</li>
+                    </ul>
+                </div>
+                <div>
                     <h3 class="text-indigo-400 font-bold text-base flex items-center gap-2">🚀 v2.0 - Major Update!</h3>
                     <ul class="list-disc pl-5 mt-2 space-y-1.5 text-gray-200">
                         <li><span class="text-white font-semibold">Multi-Selection:</span> Hold Ctrl and click multiple parts to select them all at once!</li>
@@ -509,6 +614,8 @@ class AnimationApp {
         this.redoStack = [];
         this.maxUndoSteps = 50;
         this.isUndoing = false;
+
+        this.initVFXSystem();
 
         this.init();
     }
@@ -1697,6 +1804,102 @@ class AnimationApp {
             }
             tracksContainer.appendChild(row);
         });
+
+        // Render VFX tracks
+        if (this.vfxEffects && this.vfxEffects.length > 0) {
+            // Add separator
+            const sepLabel = document.createElement('div');
+            sepLabel.className = 'h-6 flex items-center px-3 text-[10px] font-bold border-b border-purple-700/50 bg-purple-900/20 text-purple-300 uppercase tracking-wider';
+            sepLabel.innerText = 'VFX Effects';
+            labelsContainer.appendChild(sepLabel);
+
+            const sepRow = document.createElement('div');
+            sepRow.className = 'h-6 border-b border-purple-700/30 bg-purple-900/10';
+            tracksContainer.appendChild(sepRow);
+
+            this.vfxEffects.forEach(vfx => {
+                const vfxLabel = document.createElement('div');
+                const typeEmoji = {
+                    fire: '🔥', smoke: '💨', sparks: '✨',
+                    magic: '🔮', trail: '💫', explosion: '💥'
+                }[vfx.type] || '✨';
+                vfxLabel.className = 'h-8 flex items-center px-3 text-[10px] font-bold border-b border-gray-700/50 bg-gray-800/30 whitespace-nowrap overflow-hidden text-ellipsis text-purple-300';
+                vfxLabel.innerText = typeEmoji + ' ' + vfx.type;
+                labelsContainer.appendChild(vfxLabel);
+
+                const vfxRow = document.createElement('div');
+                vfxRow.className = 'h-8 border-b border-gray-700/30 relative w-full bg-gray-800/5';
+
+                // Start dot
+                const startPct = (vfx.startFrame / this.totalFrames) * 100;
+                const startDot = document.createElement('div');
+                startDot.className = 'vfx-timeline-dot';
+                startDot.style.left = 'calc(' + startPct + '%)';
+                startDot.style.background = '#' + new THREE.Color(vfx.color).getHexString();
+                startDot.title = vfx.type + ' starts at frame ' + vfx.startFrame;
+                startDot.dataset.vfxId = vfx.id;
+                startDot.dataset.type = 'start';
+                startDot.onmousedown = (e) => this.onVFXDotMouseDown(e, vfx.id, 'start');
+                vfxRow.appendChild(startDot);
+
+                // End dot
+                const endPct = (vfx.endFrame / this.totalFrames) * 100;
+                const endDot = document.createElement('div');
+                endDot.className = 'vfx-timeline-dot';
+                endDot.style.left = 'calc(' + endPct + '%)';
+                endDot.style.background = '#' + new THREE.Color(vfx.color2 || vfx.color).getHexString();
+                endDot.title = vfx.type + ' ends at frame ' + vfx.endFrame;
+                endDot.dataset.vfxId = vfx.id;
+                endDot.dataset.type = 'end';
+                endDot.onmousedown = (e) => this.onVFXDotMouseDown(e, vfx.id, 'end');
+                vfxRow.appendChild(endDot);
+
+                // Duration bar
+                const bar = document.createElement('div');
+                bar.className = 'absolute top-1/2 h-1 -translate-y-1/2 rounded opacity-50';
+                bar.style.left = startPct + '%';
+                bar.style.width = (endPct - startPct) + '%';
+                bar.style.background = 'linear-gradient(90deg, #' + new THREE.Color(vfx.color).getHexString() + ', #' + new THREE.Color(vfx.color2 || vfx.color).getHexString() + ')';
+                vfxRow.appendChild(bar);
+
+                tracksContainer.appendChild(vfxRow);
+            });
+        }
+    }
+
+    onVFXDotMouseDown(event, vfxId, type) {
+        event.stopPropagation();
+        const vfx = this.vfxEffects.find(v => v.id === vfxId);
+        if (!vfx) return;
+
+        const container = document.getElementById('timeline-tracks-container');
+        const startX = event.clientX;
+        const originalFrame = type === 'start' ? vfx.startFrame : vfx.endFrame;
+
+        const onMouseMove = (e) => {
+            const deltaX = e.clientX - startX;
+            const deltaFrame = Math.round((deltaX / container.getBoundingClientRect().width) * this.totalFrames);
+            let newFrame = originalFrame + deltaFrame;
+            newFrame = Math.max(0, Math.min(this.totalFrames, newFrame));
+
+            if (type === 'start') {
+                vfx.startFrame = Math.min(newFrame, vfx.endFrame - 1);
+            } else {
+                vfx.endFrame = Math.max(newFrame, vfx.startFrame + 1);
+            }
+
+            this.renderKeyframesUI();
+            this.updateVFXUI();
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            this.pushUndoState('updateVFX');
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
     }
 
     onKeyframeMouseDown(event, partName, kf) {
@@ -1794,6 +1997,9 @@ class AnimationApp {
     }
 
     applyFrame(frame) {
+        // Update VFX activation
+        this.updateVFXForFrame(frame);
+
         Object.keys(this.rig).forEach(name => {
             if (name === 'root') return;
             const obj = this.rig[name];
@@ -1906,10 +2112,25 @@ class AnimationApp {
             }
         });
 
+        // Serialize VFX effects
+        const vfxData = this.vfxEffects.map(vfx => ({
+            id: vfx.id,
+            type: vfx.type,
+            startFrame: vfx.startFrame,
+            endFrame: vfx.endFrame,
+            attachedTo: vfx.attachedTo,
+            position: { x: vfx.position.x, y: vfx.position.y, z: vfx.position.z },
+            color: vfx.color,
+            color2: vfx.color2,
+            size: vfx.size,
+            intensity: vfx.intensity
+        }));
+
         return JSON.stringify({ 
-            version: "2.0", name: animName, totalFrames: this.totalFrames, 
+            version: "2.1", name: animName, totalFrames: this.totalFrames, 
             fps: this.fps, currentFrame: this.currentFrame, tracks: this.keyframes,
-            props: propsData 
+            props: propsData,
+            vfx: vfxData
         }, (key, value) => {
             if (value && value.isVector3) return {x:value.x, y:value.y, z:value.z};
             if (value && value.isEuler) return {x:value.x, y:value.y, z:value.z, order:value.order};
@@ -1928,6 +2149,45 @@ class AnimationApp {
                     this.spawnProp(parsed.props[propName], propName);
                 }
             });
+        }
+
+        // Load VFX effects
+        if (parsed.vfx) {
+            // Clear existing VFX
+            this.vfxEffects.forEach(vfx => {
+                if (vfx.particleSystem) {
+                    this.scene.remove(vfx.particleSystem);
+                    vfx.particleSystem.geometry.dispose();
+                    vfx.particleSystem.material.dispose();
+                }
+            });
+            this.vfxEffects = [];
+
+            parsed.vfx.forEach(vfxData => {
+                const preset = this.vfxPresets[vfxData.type];
+                if (!preset) return;
+
+                const vfx = {
+                    id: vfxData.id || ++this.vfxIdCounter,
+                    type: vfxData.type,
+                    preset: preset,
+                    startFrame: vfxData.startFrame,
+                    endFrame: vfxData.endFrame,
+                    attachedTo: vfxData.attachedTo,
+                    position: new THREE.Vector3(vfxData.position.x, vfxData.position.y, vfxData.position.z),
+                    color: vfxData.color,
+                    color2: vfxData.color2,
+                    size: vfxData.size || preset.size,
+                    intensity: vfxData.intensity || 1.0,
+                    active: false,
+                    particleSystem: null
+                };
+
+                this.vfxEffects.push(vfx);
+                this.createParticleSystem(vfx);
+            });
+
+            this.updateVFXUI();
         }
 
         const importedKeyframes = {};
@@ -1994,9 +2254,381 @@ class AnimationApp {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
+
+    // --- VFX SYSTEM ---
+    initVFXSystem() {
+        this.vfxEffects = []; // Array of active VFX objects
+        this.vfxIdCounter = 0;
+        this.vfxPresets = {
+            fire: { color: 0xff4400, color2: 0xff8800, size: 0.3, count: 50, life: 1.0, speed: 0.5, type: 'particles' },
+            smoke: { color: 0x888888, color2: 0xaaaaaa, size: 0.5, count: 30, life: 2.0, speed: 0.2, type: 'particles' },
+            sparks: { color: 0xffff00, color2: 0xffaa00, size: 0.1, count: 80, life: 0.5, speed: 2.0, type: 'particles' },
+            magic: { color: 0xaa00ff, color2: 0x00aaff, size: 0.2, count: 60, life: 1.5, speed: 0.8, type: 'particles' },
+            trail: { color: 0x00ffff, color2: 0xffffff, size: 0.15, count: 100, life: 0.8, speed: 0.3, type: 'trail' },
+            explosion: { color: 0xff0000, color2: 0xffaa00, size: 0.4, count: 150, life: 1.2, speed: 3.0, type: 'burst' }
+        };
+    }
+
+    addVFX(presetType) {
+        const preset = this.vfxPresets[presetType];
+        if (!preset) return;
+
+        const vfxId = ++this.vfxIdCounter;
+
+        // Default timing: starts at current frame, lasts 60 frames
+        const startFrame = this.currentFrame;
+        const endFrame = Math.min(this.totalFrames, this.currentFrame + 60);
+
+        // Create VFX data object
+        const vfxData = {
+            id: vfxId,
+            type: presetType,
+            preset: preset,
+            startFrame: startFrame,
+            endFrame: endFrame,
+            attachedTo: this.selectedObject ? this.selectedObject.userData.name : null,
+            position: this.selectedObject ? this.selectedObject.position.clone() : new THREE.Vector3(0, 3, 0),
+            color: preset.color,
+            color2: preset.color2,
+            size: preset.size,
+            intensity: 1.0,
+            active: false,
+            particleSystem: null
+        };
+
+        this.vfxEffects.push(vfxData);
+        this.createParticleSystem(vfxData);
+        this.updateVFXUI();
+        this.renderVFXOnTimeline();
+        this.pushUndoState('addVFX');
+        this.showToast('Added ' + presetType + ' VFX effect!');
+    }
+
+    createParticleSystem(vfxData) {
+        const particleCount = vfxData.preset.count;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+        const velocities = new Float32Array(particleCount * 3);
+        const lifetimes = new Float32Array(particleCount);
+        const maxLifetimes = new Float32Array(particleCount);
+
+        const color1 = new THREE.Color(vfxData.color);
+        const color2 = new THREE.Color(vfxData.color2);
+
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] = vfxData.position.x;
+            positions[i * 3 + 1] = vfxData.position.y;
+            positions[i * 3 + 2] = vfxData.position.z;
+
+            const mixedColor = color1.clone().lerp(color2, Math.random());
+            colors[i * 3] = mixedColor.r;
+            colors[i * 3 + 1] = mixedColor.g;
+            colors[i * 3 + 2] = mixedColor.b;
+
+            sizes[i] = vfxData.preset.size * (0.5 + Math.random());
+
+            // Random velocity
+            const speed = vfxData.preset.speed;
+            velocities[i * 3] = (Math.random() - 0.5) * speed;
+            velocities[i * 3 + 1] = Math.random() * speed * 0.5 + 0.1;
+            velocities[i * 3 + 2] = (Math.random() - 0.5) * speed;
+
+            lifetimes[i] = -Math.random() * vfxData.preset.life; // Staggered start
+            maxLifetimes[i] = vfxData.preset.life * (0.5 + Math.random());
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        // Store physics data
+        geometry.userData = {
+            velocities: velocities,
+            lifetimes: lifetimes,
+            maxLifetimes: maxLifetimes,
+            color1: color1,
+            color2: color2,
+            particleCount: particleCount
+        };
+
+        // Create shader material for better looking particles
+        const material = new THREE.PointsMaterial({
+            size: vfxData.preset.size,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            sizeAttenuation: true
+        });
+
+        const particles = new THREE.Points(geometry, material);
+        particles.userData = { isVFX: true, vfxId: vfxData.id };
+        particles.visible = false; // Hidden until active
+
+        this.scene.add(particles);
+        vfxData.particleSystem = particles;
+    }
+
+    updateVFXParticles(deltaTime) {
+        this.vfxEffects.forEach(vfx => {
+            if (!vfx.particleSystem || !vfx.active) return;
+
+            const geometry = vfx.particleSystem.geometry;
+            const positions = geometry.attributes.position.array;
+            const colors = geometry.attributes.color.array;
+            const sizes = geometry.attributes.size.array;
+            const userData = geometry.userData;
+            const velocities = userData.velocities;
+            const lifetimes = userData.lifetimes;
+            const maxLifetimes = userData.maxLifetimes;
+            const count = userData.particleCount;
+
+            // Update attachment position if attached to a part
+            let basePos = vfx.position.clone();
+            if (vfx.attachedTo && this.rig[vfx.attachedTo]) {
+                basePos.copy(this.rig[vfx.attachedTo].position);
+            }
+
+            for (let i = 0; i < count; i++) {
+                lifetimes[i] += deltaTime;
+
+                if (lifetimes[i] > maxLifetimes[i]) {
+                    // Reset particle
+                    lifetimes[i] = 0;
+                    positions[i * 3] = basePos.x + (Math.random() - 0.5) * 0.5;
+                    positions[i * 3 + 1] = basePos.y + (Math.random() - 0.5) * 0.5;
+                    positions[i * 3 + 2] = basePos.z + (Math.random() - 0.5) * 0.5;
+
+                    const speed = vfx.preset.speed;
+                    velocities[i * 3] = (Math.random() - 0.5) * speed;
+                    velocities[i * 3 + 1] = Math.random() * speed * 0.5 + 0.1;
+                    velocities[i * 3 + 2] = (Math.random() - 0.5) * speed;
+
+                    sizes[i] = vfx.preset.size * (0.5 + Math.random());
+                } else {
+                    // Update position
+                    positions[i * 3] += velocities[i * 3] * deltaTime;
+                    positions[i * 3 + 1] += velocities[i * 3 + 1] * deltaTime;
+                    positions[i * 3 + 2] += velocities[i * 3 + 2] * deltaTime;
+
+                    // Gravity for some types
+                    if (vfx.type === 'fire' || vfx.type === 'smoke') {
+                        velocities[i * 3 + 1] += 0.5 * deltaTime; // Rise up
+                    }
+                    if (vfx.type === 'sparks' || vfx.type === 'explosion') {
+                        velocities[i * 3 + 1] -= 2.0 * deltaTime; // Fall down
+                    }
+                }
+
+                // Fade based on lifetime
+                const lifeRatio = lifetimes[i] / maxLifetimes[i];
+                const fade = Math.max(0, 1 - lifeRatio);
+
+                // Update color brightness
+                const mixedColor = userData.color1.clone().lerp(userData.color2, lifeRatio);
+                colors[i * 3] = mixedColor.r * fade;
+                colors[i * 3 + 1] = mixedColor.g * fade;
+                colors[i * 3 + 2] = mixedColor.b * fade;
+
+                sizes[i] = vfx.preset.size * fade * (0.5 + 0.5 * Math.random());
+            }
+
+            geometry.attributes.position.needsUpdate = true;
+            geometry.attributes.color.needsUpdate = true;
+            geometry.attributes.size.needsUpdate = true;
+        });
+    }
+
+    updateVFXForFrame(frame) {
+        this.vfxEffects.forEach(vfx => {
+            const shouldBeActive = frame >= vfx.startFrame && frame <= vfx.endFrame;
+
+            if (shouldBeActive && !vfx.active) {
+                // Activate
+                vfx.active = true;
+                if (vfx.particleSystem) {
+                    vfx.particleSystem.visible = true;
+                    // Reset particles
+                    const geometry = vfx.particleSystem.geometry;
+                    const userData = geometry.userData;
+                    const count = userData.particleCount;
+                    const lifetimes = userData.lifetimes;
+                    for (let i = 0; i < count; i++) {
+                        lifetimes[i] = -Math.random() * vfx.preset.life;
+                    }
+                }
+            } else if (!shouldBeActive && vfx.active) {
+                // Deactivate
+                vfx.active = false;
+                if (vfx.particleSystem) {
+                    vfx.particleSystem.visible = false;
+                }
+            }
+
+            // Update UI highlight
+            const vfxEl = document.getElementById('vfx-item-' + vfx.id);
+            if (vfxEl) {
+                vfxEl.classList.toggle('active', shouldBeActive);
+            }
+        });
+    }
+
+    updateVFXUI() {
+        const list = document.getElementById('vfx-list');
+        if (!list) return;
+
+        list.innerHTML = '';
+        document.getElementById('vfx-count').innerText = this.vfxEffects.length;
+
+        this.vfxEffects.forEach(vfx => {
+            const div = document.createElement('div');
+            div.id = 'vfx-item-' + vfx.id;
+            div.className = 'vfx-item' + (vfx.active ? ' active' : '');
+
+            const typeEmoji = {
+                fire: '🔥', smoke: '💨', sparks: '✨',
+                magic: '🔮', trail: '💫', explosion: '💥'
+            }[vfx.type] || '✨';
+
+            div.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">${typeEmoji}</span>
+                        <div>
+                            <div class="text-white font-bold text-xs capitalize">${vfx.type}</div>
+                            <div class="text-gray-400 text-[10px]">${vfx.attachedTo || 'Free'}</div>
+                        </div>
+                    </div>
+                    <button onclick="app.removeVFX(${vfx.id})" class="text-red-400 hover:text-red-300 text-xs px-1">✕</button>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-gray-400 w-12">Start</span>
+                        <input type="number" value="${vfx.startFrame}" min="0" max="${this.totalFrames}" 
+                            class="w-16 bg-gray-800 border border-gray-600 rounded px-1 py-0.5 text-xs text-white text-center"
+                            onchange="app.updateVFXTiming(${vfx.id}, 'start', this.value)">
+                        <span class="text-[10px] text-gray-400">→</span>
+                        <input type="number" value="${vfx.endFrame}" min="0" max="${this.totalFrames}" 
+                            class="w-16 bg-gray-800 border border-gray-600 rounded px-1 py-0.5 text-xs text-white text-center"
+                            onchange="app.updateVFXTiming(${vfx.id}, 'end', this.value)">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-gray-400 w-12">Color</span>
+                        <input type="color" value="#${new THREE.Color(vfx.color).getHexString()}" 
+                            class="vfx-color-picker" onchange="app.updateVFXColor(${vfx.id}, this.value)">
+                        <span class="text-[10px] text-gray-400">Size</span>
+                        <input type="range" min="0.1" max="2" step="0.1" value="${vfx.size}" 
+                            class="vfx-slider flex-1" oninput="app.updateVFXSize(${vfx.id}, this.value)">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-gray-400 w-12">Intensity</span>
+                        <input type="range" min="0.1" max="3" step="0.1" value="${vfx.intensity}" 
+                            class="vfx-slider flex-1" oninput="app.updateVFXIntensity(${vfx.id}, this.value)">
+                    </div>
+                </div>
+            `;
+
+            list.appendChild(div);
+        });
+    }
+
+    renderVFXOnTimeline() {
+        // VFX dots are rendered in the keyframe timeline
+        // We'll add them to the existing renderKeyframesUI or create a separate layer
+        // For now, let's add a VFX track at the bottom of the timeline
+        this.renderKeyframesUI(); // Re-render to include VFX
+    }
+
+    removeVFX(id) {
+        const idx = this.vfxEffects.findIndex(v => v.id === id);
+        if (idx === -1) return;
+
+        const vfx = this.vfxEffects[idx];
+        if (vfx.particleSystem) {
+            this.scene.remove(vfx.particleSystem);
+            vfx.particleSystem.geometry.dispose();
+            vfx.particleSystem.material.dispose();
+        }
+
+        this.vfxEffects.splice(idx, 1);
+        this.updateVFXUI();
+        this.renderKeyframesUI();
+        this.pushUndoState('removeVFX');
+        this.showToast('VFX removed');
+    }
+
+    updateVFXTiming(id, field, value) {
+        const vfx = this.vfxEffects.find(v => v.id === id);
+        if (!vfx) return;
+
+        const num = parseInt(value);
+        if (isNaN(num)) return;
+
+        if (field === 'start') vfx.startFrame = Math.max(0, Math.min(num, vfx.endFrame - 1));
+        if (field === 'end') vfx.endFrame = Math.max(vfx.startFrame + 1, Math.min(num, this.totalFrames));
+
+        this.updateVFXUI();
+        this.renderKeyframesUI();
+        this.pushUndoState('updateVFX');
+    }
+
+    updateVFXColor(id, hexColor) {
+        const vfx = this.vfxEffects.find(v => v.id === id);
+        if (!vfx) return;
+
+        vfx.color = new THREE.Color(hexColor).getHex();
+
+        // Recreate particle system with new color
+        if (vfx.particleSystem) {
+            this.scene.remove(vfx.particleSystem);
+            vfx.particleSystem.geometry.dispose();
+            vfx.particleSystem.material.dispose();
+        }
+        this.createParticleSystem(vfx);
+
+        this.updateVFXUI();
+        this.pushUndoState('updateVFX');
+    }
+
+    updateVFXSize(id, value) {
+        const vfx = this.vfxEffects.find(v => v.id === id);
+        if (!vfx) return;
+        vfx.size = parseFloat(value);
+        vfx.preset.size = vfx.size;
+    }
+
+    updateVFXIntensity(id, value) {
+        const vfx = this.vfxEffects.find(v => v.id === id);
+        if (!vfx) return;
+        vfx.intensity = parseFloat(value);
+        if (vfx.particleSystem) {
+            vfx.particleSystem.material.opacity = 0.8 * vfx.intensity;
+        }
+    }
+
+    attachVFXToPart(vfxId, partName) {
+        const vfx = this.vfxEffects.find(v => v.id === vfxId);
+        if (!vfx) return;
+        vfx.attachedTo = partName;
+        if (this.rig[partName]) {
+            vfx.position.copy(this.rig[partName].position);
+        }
+        this.updateVFXUI();
+    }
+
     animate(time) {
         requestAnimationFrame((t) => this.animate(t));
         this.updateCameraMovement();
+
+        // Update VFX particles
+        const deltaTime = 0.016; // ~60fps
+        this.updateVFXParticles(deltaTime);
+
+        // Update VFX activation based on current frame
+        this.updateVFXForFrame(this.currentFrame);
 
         if(this.isPlaying) {
             if(time - this.lastTime > 1000/this.fps) {
